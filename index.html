@@ -5,30 +5,31 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Chess vs Stockfish 18</title>
     
-    <!-- 1. CSS for the Board (Reliable JSDelivr link) -->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.css">
+    <!-- 1. External CSS (Board Theme) -->
+    <link rel="stylesheet" href="https://jsdelivr.net">
     
     <style>
-        body { font-family: sans-serif; display: flex; flex-direction: column; align-items: center; background: #f0f2f5; padding-top: 20px; }
-        #board { width: 400px; max-width: 95vw; border: 4px solid #333; box-shadow: 0 5px 15px rgba(0,0,0,0.2); }
-        .info { margin-top: 20px; text-align: center; }
-        #status { font-weight: bold; margin-bottom: 10px; }
-        button { padding: 10px 25px; cursor: pointer; background: #2c3e50; color: white; border: none; border-radius: 4px; }
+        body { font-family: sans-serif; display: flex; flex-direction: column; align-items: center; background: #ececec; padding: 20px; }
+        #board { width: 400px; max-width: 95vw; border: 4px solid #333; box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
+        .controls { margin-top: 20px; text-align: center; }
+        #status { font-weight: bold; color: #444; margin-bottom: 10px; height: 1.2em; }
+        button { padding: 10px 20px; font-size: 16px; cursor: pointer; border: none; border-radius: 4px; background: #2c3e50; color: white; }
+        button:hover { background: #34495e; }
     </style>
 </head>
 <body>
 
     <div id="board"></div>
 
-    <div class="info">
-        <p id="status">Loading Engine...</p>
+    <div class="controls">
+        <p id="status">Waking up engine...</p>
         <button id="resetBtn">New Game</button>
     </div>
 
-    <!-- 2. Scripts at the BOTTOM to prevent page-load hanging -->
+    <!-- 2. Essential JS Libraries (CDNs) -->
     <script src="https://cloudflare.com"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>
+    <script src="https://jsdelivr.net"></script>
+    <script src="https://cloudflare.com"></script>
 
     <script>
         $(document).ready(function() {
@@ -36,58 +37,68 @@
             var game = new Chess();
             var engine;
 
-            // Step 1: Initialize Engine
+            // 3. Start Stockfish Worker
             try {
-                // Must match your exact filename
+                // IMPORTANT: These files MUST be in your Netlify folder
                 engine = new Worker('stockfish-18-lite-single.js');
+                
+                // Initialize engine communication
                 engine.postMessage('uci');
-                console.log("Worker initialized.");
+                engine.postMessage('isready'); 
+                console.log("Worker created, waiting for response...");
             } catch (e) {
-                $('#status').text('Engine Error: Worker missing.');
+                $('#status').text('Error: Worker blocked.');
                 console.error(e);
             }
 
-            // Step 2: Handle Engine Output
-            engine.onmessage = function(e) {
-                if (e.data === 'uciok') {
-                    $('#status').text('Ready! Your turn.');
+            // 4. Handle Engine Messages
+            engine.onmessage = function(event) {
+                var line = event.data;
+                console.log("SF:", line);
+
+                if (line === 'readyok') {
+                    $('#status').text('Engine Ready! Your move.');
                 }
-                
-                if (e.data.startsWith('bestmove')) {
-                    var m = e.data.split(' ')[1]; // Get move like "e2e4"
-                    game.move({ from: m.substring(0, 2), to: m.substring(2, 4), promotion: 'q' });
+
+                if (line.startsWith('bestmove')) {
+                    var m = line.split(' ')[1]; // Get "e2e4"
+                    game.move({
+                        from: m.substring(0, 2),
+                        to: m.substring(2, 4),
+                        promotion: 'q'
+                    });
                     board.position(game.fen());
-                    $('#status').text('Your turn');
+                    $('#status').text('Your Turn');
                 }
             };
 
-            // Step 3: Piece Movement
+            // 5. User Interaction logic
             function onDrop(source, target) {
                 var move = game.move({ from: source, to: target, promotion: 'q' });
-                if (move === null) return 'snapback';
+                
+                if (move === null) return 'snapback'; // Illegal move
 
                 $('#status').text('Stockfish thinking...');
                 
-                // Slight delay to ensure the board renders the move before engine starts heavy thinking
-                window.setTimeout(function() {
-                    engine.postMessage('position fen ' + game.fen());
-                    engine.postMessage('go depth 15');
-                }, 100);
+                // Send board state to engine
+                engine.postMessage('position fen ' + game.fen());
+                engine.postMessage('go depth 15');
             }
 
-            // Step 4: Initialize Board
+            // 6. Initialize the Board
             board = Chessboard('board', {
                 draggable: true,
                 position: 'start',
                 onDrop: onDrop,
-                // Loads pieces from official CDN
                 pieceTheme: 'https://chessboardjs.com{piece}.png'
             });
 
+            // 7. Reset Handler
             $('#resetBtn').on('click', function() {
                 game.reset();
                 board.start();
                 $('#status').text('New Game Started');
+                engine.postMessage('ucinewgame');
             });
         });
     </script>
