@@ -1,22 +1,87 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Play Stockfish 18</title>
+    <!-- Styles for the board -->
+    <link rel="stylesheet" href="https://unpkg.com">
+    <style>
+        body { font-family: sans-serif; display: flex; flex-direction: column; align-items: center; }
+        #myBoard { width: 400px; margin: 20px; }
+        .info { margin-top: 10px; color: #555; }
+    </style>
+</head>
 <body>
+
+    <h2>Play vs Stockfish 18 (Depth 15)</h2>
+    <div id="myBoard"></div>
+    <div class="info">Status: <span id="status">Your turn (White)</span></div>
+    <button onclick="resetGame()">New Game</button>
+
+    <!-- Dependencies -->
+    <script src="https://jquery.com"></script>
+    <script src="https://unpkg.com"></script>
+    <script src="https://cloudflare.com"></script>
+
     <script>
-        // 1. Initialize the worker
+        var board = null;
+        var game = new Chess();
+        var $status = $('#status');
+
+        // Initialize Stockfish Lite Single
         const engine = new Worker('stockfish-18-lite-single.js');
 
-        // 2. Listen for the result
-        engine.onmessage = (event) => {
+        engine.onmessage = function(event) {
             if (event.data.includes('bestmove')) {
-                console.log("Result for Depth 15:", event.data);
+                const move = event.data.split(' ')[1];
+                // Make the engine's move
+                game.move({ from: move.substring(0, 2), to: move.substring(2, 4), promotion: 'q' });
+                board.position(game.fen());
+                updateStatus();
             }
         };
 
-        // 3. Send the depth 15 commands
-        engine.postMessage('uci');
-        engine.postMessage('ucinewgame');
-        engine.postMessage('position startpos'); // Or your custom FEN
-        engine.postMessage('go depth 15');       // <--- Sets the specific depth
+        function onDrop(source, target) {
+            // Attempt to move piece
+            var move = game.move({ from: source, to: target, promotion: 'q' });
+            if (move === null) return 'snapback'; // Illegal move
+
+            updateStatus();
+
+            // After player moves, tell Stockfish to think
+            window.setTimeout(() => {
+                engine.postMessage('position fen ' + game.fen());
+                engine.postMessage('go depth 15');
+                $status.html('Stockfish is thinking...');
+            }, 250);
+        }
+
+        function updateStatus() {
+            var status = '';
+            var moveColor = (game.turn() === 'b') ? 'Black' : 'White';
+
+            if (game.in_checkmate()) { status = 'Game over, ' + moveColor + ' is in checkmate.'; }
+            else if (game.in_draw()) { status = 'Game over, drawn position'; }
+            else { 
+                status = moveColor + ' to move';
+                if (game.in_check()) status += ', ' + moveColor + ' is in check';
+            }
+            $status.html(status);
+        }
+
+        function resetGame() {
+            game.reset();
+            board.start();
+            updateStatus();
+        }
+
+        var config = {
+            draggable: true,
+            position: 'start',
+            onDrop: onDrop
+        };
+        board = Chessboard('myBoard', config);
+        updateStatus();
     </script>
 </body>
 </html>
