@@ -1,36 +1,34 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Stockfish 18 Playable</title>
+    <meta charset="UTF-8">
+    <title>Chess Test</title>
+    <!-- 1. CSS for the board -->
     <link rel="stylesheet" href="https://unpkg.com">
-    <style>
-        body { font-family: sans-serif; display: flex; flex-direction: column; align-items: center; background: #f0f0f0; }
-        /* Force visibility with a fallback background */
-        #myBoard { width: 400px; height: 400px; margin: 20px; background-color: #ddd; border: 5px solid #444; box-shadow: 0 5px 15px rgba(0,0,0,0.3); }
-        .controls { text-align: center; }
-        button { padding: 10px 25px; font-size: 16px; cursor: pointer; background: #2c3e50; color: white; border: none; border-radius: 5px; }
-    </script>
 </head>
 <body>
+    <h3>Chess vs Stockfish</h3>
+    
+    <!-- 2. The Board Container -->
+    <div id="myBoard" style="width: 400px; border: 2px solid black;"></div>
 
-    <div id="myBoard"></div>
-    <div class="controls">
-        <p id="status">Loading Engine...</p>
-        <button id="resetBtn">New Game</button>
+    <div style="margin-top: 10px;">
+        <p id="status">Status: Loading...</p>
+        <button id="resetBtn">Reset Game</button>
     </div>
 
-    <!-- USE FULL JQUERY (NOT SLIM) -->
+    <!-- 3. Scripts in strict order -->
     <script src="https://jquery.com"></script>
     <script src="https://unpkg.com"></script>
     <script src="https://cloudflare.com"></script>
 
     <script>
         $(document).ready(function() {
+            console.log("Page ready!");
+            
             var board = null;
             var game = new Chess();
-            
-            // Initialization
-            const engine = new Worker('stockfish-18-lite-single.js');
+            var engine = new Worker('stockfish-18-lite-single.js');
 
             function onDrop(source, target) {
                 var move = game.move({ from: source, to: target, promotion: 'q' });
@@ -38,24 +36,23 @@
 
                 engine.postMessage('position fen ' + game.fen());
                 engine.postMessage('go depth 15');
-                $('#status').text('Stockfish thinking...');
+                $('#status').text('Thinking...');
             }
 
             var config = {
                 draggable: true,
                 position: 'start',
                 onDrop: onDrop,
-                // Ensures pieces load from a reliable source
                 pieceTheme: 'https://chessboardjs.com{piece}.png'
             };
 
-            // Force board to initialize
             board = Chessboard('myBoard', config);
-            $('#status').text('Your Turn (White)');
+            $('#status').text('Your Turn');
 
             engine.onmessage = function(e) {
                 if (e.data.startsWith('bestmove')) {
-                    const moveStr = e.data.split(' ')[1]; 
+                    const moveParts = e.data.split(' ');
+                    const moveStr = moveParts[1];
                     game.move({ from: moveStr.substring(0, 2), to: moveStr.substring(2, 4), promotion: 'q' });
                     board.position(game.fen());
                     $('#status').text('Your Turn');
@@ -65,7 +62,7 @@
             $('#resetBtn').on('click', function() {
                 game.reset();
                 board.start();
-                $('#status').text('Game Reset');
+                $('#status').text('Game reset');
             });
         });
     </script>
