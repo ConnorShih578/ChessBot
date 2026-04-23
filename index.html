@@ -2,66 +2,52 @@
 <html>
 <head>
     <meta charset="UTF-8">
-    <title>Chess Test</title>
+    <title>Chess vs SF18</title>
     <link rel="stylesheet" href="https://jsdelivr.net">
     <style>
-        body { display: flex; flex-direction: column; align-items: center; padding-top: 50px; font-family: sans-serif; }
-        #myBoard { width: 400px; height: 400px; border: 2px solid #333; background: #eee; }
+        body { display: flex; flex-direction: column; align-items: center; padding-top: 30px; font-family: sans-serif; }
+        #board { width: 400px; }
     </style>
 </head>
 <body>
-    <div id="myBoard"></div>
-    <p id="status">Status: Initializing...</p>
-    <button onclick="location.reload()">Reload Page</button>
+    <div id="board"></div>
+    <p id="status">Drag a piece to start</p>
 
+    <!-- Essential Scripts -->
     <script src="https://cloudflare.com"></script>
     <script src="https://jsdelivr.net"></script>
     <script src="https://cloudflare.com"></script>
 
     <script>
-        $(document).ready(function() {
-            console.log("Step 1: HTML Loaded");
-            var game = new Chess();
-            var board = null;
-            var engine = null;
+        // 1. Initialize logic
+        var game = new Chess();
+        var sf = new Worker('stockfish-18-lite-single.js');
 
-            try {
-                // Initialize the worker
-                engine = new Worker('stockfish-18-lite-single.js');
-                console.log("Step 2: Worker Script Found");
-                
-                engine.onmessage = function(e) {
-                    console.log("Engine Message:", e.data);
-                    if (e.data.startsWith('bestmove')) {
-                        var move = e.data.split(' ');
-                        game.move({ from: move.substring(0, 2), to: move.substring(2, 4), promotion: 'q' });
-                        board.position(game.fen());
-                        $('#status').text('Your Turn');
-                    }
-                };
-
-                // Check if engine is ready
-                engine.postMessage('uci');
-                setTimeout(() => { $('#status').text('Ready to Play!'); }, 1000);
-
-            } catch (err) {
-                console.error("Step 2 FAILED:", err);
-                $('#status').text('Error: Worker blocked or missing.');
+        // 2. Handle engine responses
+        sf.onmessage = function(e) {
+            console.log(e.data);
+            if (e.data.indexOf('bestmove') > -1) {
+                var m = e.data.split(' ');
+                var moveStr = m[1];
+                game.move({ from: moveStr.substring(0, 2), to: moveStr.substring(2, 4), promotion: 'q' });
+                board.position(game.fen());
+                document.getElementById('status').innerText = "Your Turn";
             }
+        };
 
-            board = Chessboard('myBoard', {
-                draggable: true,
-                position: 'start',
-                pieceTheme: 'https://chessboardjs.com{piece}.png',
-                onDrop: function(source, target) {
-                    var move = game.move({ from: source, to: target, promotion: 'q' });
-                    if (move === null) return 'snapback';
-                    
-                    $('#status').text('Stockfish thinking...');
-                    engine.postMessage('position fen ' + game.fen());
-                    engine.postMessage('go depth 15');
-                }
-            });
+        // 3. Setup Board
+        var board = Chessboard('board', {
+            draggable: true,
+            position: 'start',
+            pieceTheme: 'https://chessboardjs.com{piece}.png',
+            onDrop: function(source, target) {
+                var move = game.move({ from: source, to: target, promotion: 'q' });
+                if (move === null) return 'snapback';
+
+                document.getElementById('status').innerText = "Stockfish is thinking...";
+                sf.postMessage('position fen ' + game.fen());
+                sf.postMessage('go depth 15');
+            }
         });
     </script>
 </body>
