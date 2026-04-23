@@ -2,8 +2,7 @@
 <html>
 <head>
     <meta charset="UTF-8">
-    <title>Chess</title>
-    <!-- CSS must stay in head -->
+    <title>Chess vs Stockfish</title>
     <link rel="stylesheet" href="https://jsdelivr.net">
     <style>
         body { display: flex; flex-direction: column; align-items: center; padding-top: 30px; font-family: sans-serif; }
@@ -12,9 +11,9 @@
 </head>
 <body>
     <div id="board"></div>
-    <p id="status">Loading...</p>
+    <p id="status">Ready to play</p>
 
-    <!-- SCRIPTS AT BOTTOM: This prevents the 20% hang -->
+    <!-- Essential Scripts -->
     <script src="https://cloudflare.com"></script>
     <script src="https://jsdelivr.net"></script>
     <script src="https://cloudflare.com"></script>
@@ -22,14 +21,22 @@
     <script>
         var board = null;
         var game = new Chess();
-        // Match your exact filename
+        
+        // This is the part that worked earlier
         var sf = new Worker('stockfish-18-lite-single.js');
 
         sf.onmessage = function(e) {
-            if (e.data.indexOf('bestmove') > -1) {
-                var m = e.data.split(' ');
-                var moveStr = m[1];
-                game.move({ from: moveStr.substring(0, 2), to: moveStr.substring(2, 4), promotion: 'q' });
+            console.log(e.data);
+            if (e.data.startsWith('bestmove')) {
+                var parts = e.data.split(' ');
+                var move = parts[1]; // Get the actual move string like "e2e4"
+                
+                game.move({ 
+                    from: move.substring(0, 2), 
+                    to: move.substring(2, 4), 
+                    promotion: 'q' 
+                });
+                
                 board.position(game.fen());
                 document.getElementById('status').innerText = "Your Turn";
             }
@@ -42,6 +49,7 @@
             onDrop: function(source, target) {
                 var move = game.move({ from: source, to: target, promotion: 'q' });
                 if (move === null) return 'snapback';
+
                 document.getElementById('status').innerText = "Thinking...";
                 sf.postMessage('position fen ' + game.fen());
                 sf.postMessage('go depth 15');
@@ -49,7 +57,6 @@
         };
 
         board = Chessboard('board', config);
-        document.getElementById('status').innerText = "Ready!";
     </script>
 </body>
 </html>
