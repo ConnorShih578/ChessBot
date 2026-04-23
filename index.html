@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html>
+<body>
+    <script>
+        // 1. Initialize the worker
+        const engine = new Worker('stockfish.js');
+
+        // 2. Listen for the result
+        engine.onmessage = (event) => {
+            if (event.data.includes('bestmove')) {
+                console.log("Result for Depth 15:", event.data);
+            }
+        };
+
+        // 3. Send the depth 15 commands
+        engine.postMessage('uci');
+        engine.postMessage('ucinewgame');
+        engine.postMessage('position startpos'); // Or your custom FEN
+        engine.postMessage('go depth 15');       // <--- Sets the specific depth
+    </script>
+</body>
+</html>
