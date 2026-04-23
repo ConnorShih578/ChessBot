@@ -2,32 +2,34 @@
 <html>
 <head>
     <meta charset="UTF-8">
-    <title>Chess Test</title>
-    <!-- 1. CSS for the board -->
-    <link rel="stylesheet" href="https://unpkg.com">
+    <title>Chess vs Stockfish</title>
+    <!-- 1. Fixed CSS Link -->
+    <link rel="stylesheet" href="https://jsdelivr.net">
+    <style>
+        body { font-family: sans-serif; display: flex; flex-direction: column; align-items: center; padding: 20px; }
+        #myBoard { width: 400px; border: 2px solid #333; }
+        .controls { margin-top: 15px; text-align: center; }
+    </style>
 </head>
 <body>
-    <h3>Chess vs Stockfish</h3>
-    
-    <!-- 2. The Board Container -->
-    <div id="myBoard" style="width: 400px; border: 2px solid black;"></div>
 
-    <div style="margin-top: 10px;">
+    <div id="myBoard"></div>
+    <div class="controls">
         <p id="status">Status: Loading...</p>
-        <button id="resetBtn">Reset Game</button>
+        <button id="resetBtn">New Game</button>
     </div>
 
-    <!-- 3. Scripts in strict order -->
-    <script src="https://jquery.com"></script>
-    <script src="https://unpkg.com"></script>
+    <!-- 2. Fixed Script Links (Direct files, not folders) -->
+    <script src="https://cloudflare.com"></script>
+    <script src="https://jsdelivr.net"></script>
     <script src="https://cloudflare.com"></script>
 
     <script>
         $(document).ready(function() {
-            console.log("Page ready!");
-            
             var board = null;
             var game = new Chess();
+            
+            // Ensure this filename is EXACTLY what is in your Netlify folder
             var engine = new Worker('stockfish-18-lite-single.js');
 
             function onDrop(source, target) {
@@ -36,7 +38,7 @@
 
                 engine.postMessage('position fen ' + game.fen());
                 engine.postMessage('go depth 15');
-                $('#status').text('Thinking...');
+                $('#status').text('Stockfish is thinking...');
             }
 
             var config = {
@@ -51,9 +53,15 @@
 
             engine.onmessage = function(e) {
                 if (e.data.startsWith('bestmove')) {
-                    const moveParts = e.data.split(' ');
-                    const moveStr = moveParts[1];
-                    game.move({ from: moveStr.substring(0, 2), to: moveStr.substring(2, 4), promotion: 'q' });
+                    var moveData = e.data.split(' ');
+                    var moveStr = moveData[1]; // Get "e2e4"
+                    
+                    game.move({ 
+                        from: moveStr.substring(0, 2), 
+                        to: moveStr.substring(2, 4), 
+                        promotion: 'q' 
+                    });
+                    
                     board.position(game.fen());
                     $('#status').text('Your Turn');
                 }
@@ -62,9 +70,10 @@
             $('#resetBtn').on('click', function() {
                 game.reset();
                 board.start();
-                $('#status').text('Game reset');
+                $('#status').text('New Game Started');
             });
         });
     </script>
 </body>
 </html>
+
