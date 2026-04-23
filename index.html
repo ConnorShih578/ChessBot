@@ -4,12 +4,9 @@
     <meta charset="UTF-8">
     <title>Trash Talk Chess Bot</title>
 
-    <!-- Chessboard.js -->
     <link rel="stylesheet" href="https://chessboardjs.com/css/chessboard-1.0.0.min.css">
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://chessboardjs.com/js/chessboard-1.0.0.min.js"></script>
-
-    <!-- Chess.js -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.13.4/chess.min.js"></script>
 
     <style>
@@ -23,22 +20,21 @@
             width: 400px;
             margin: 20px auto;
         }
+        #trashTalk {
+            margin-top: 20px;
+            color: #ff6b6b;
+            font-style: italic;
+            min-height: 40px;
+        }
         #status {
             margin-top: 10px;
         }
-        #trashTalk {
-            margin-top: 20px;
-            font-style: italic;
-            color: #ff6b6b;
-            min-height: 40px;
-        }
         button {
             margin-top: 15px;
-            padding: 8px 16px;
+            padding: 8px 14px;
             background: #333;
             color: white;
             border: none;
-            cursor: pointer;
         }
     </style>
 </head>
@@ -60,75 +56,14 @@ $(document).ready(function() {
     var engine = null;
 
     var currentEval = 0.0;
-    let lastEval = 0;
-    let swing = 0;
+
+    /* =========================
+       ONLY COMMENTARY UPDATED
+       ========================= */
+
     let lastLine = "";
-
-    const openingBook = {
-        "e4": "King's Pawn. I've crushed this line thousands of times.",
-        "d4": "A positional start. Let's see if you understand it.",
-        "e4 e5 Nf3 Nc6 Bb5": "Ruy Lopez. Safe. Predictable.",
-        "d4 d5 c4": "Queen's Gambit. You watched a video, didn't you?"
-    };
-
-    const situationalTalk = {
-        botWinning: [
-            "I'm barely trying and you're still collapsing.",
-            "This is getting one-sided.",
-            "The position is winning. You just don't see it yet."
-        ],
-        playerWinning: [
-            "Temporary luck. Nothing more.",
-            "You're ahead... which makes this more embarrassing when you lose.",
-            "Even bad positions are winnable—for me."
-        ],
-        check: [
-            "Check. Stay focused.",
-            "You're in check. Try not to panic.",
-            "That king looks uncomfortable."
-        ],
-        general: [
-            "Interesting move.",
-            "You're thinking... I assume.",
-            "I've seen worse. Not often, though."
-        ],
-        moveSpecific: {
-            capture: [
-                "You found a capture. Impressive... for you.",
-                "Trading pieces? Let's see who benefits.",
-                "Sure, take it. That helps me more."
-            ],
-            castle: [
-                "You finally castled.",
-                "King safety. A bit late.",
-                "Textbook move. Predictable."
-            ],
-            promotion: [
-                "A promotion? Now it gets interesting.",
-                "New queen. Same problems.",
-                "Let's see if you can use it properly."
-            ],
-            check_given: [
-                "You gave a check. Good job.",
-                "Checks are easy. Winning isn't.",
-                "That changes very little."
-            ]
-        },
-        phase: {
-            opening: [
-                "We're still in theory.",
-                "Try not to mess up the opening."
-            ],
-            middlegame: [
-                "This is where things fall apart.",
-                "Now it's about calculation."
-            ],
-            endgame: [
-                "Endgame. Precision matters now.",
-                "Let's see your technique."
-            ]
-        }
-    };
+    let lastEval = 0;
+    let evalSwing = 0;
 
     function pickLine(list) {
         let line;
@@ -139,11 +74,9 @@ $(document).ready(function() {
         return line;
     }
 
-    function getGamePhase() {
-        const moveCount = game.history().length;
-        if (moveCount < 10) return 'opening';
-        if (moveCount < 30) return 'middlegame';
-        return 'endgame';
+    function updateEvalTrend(newEval) {
+        evalSwing = newEval - lastEval;
+        lastEval = newEval;
     }
 
     function getMoveContext(move) {
@@ -158,20 +91,101 @@ $(document).ready(function() {
         return 'normal';
     }
 
-    function updateEvalTrend(newEval) {
-        swing = newEval - lastEval;
-        lastEval = newEval;
+    function getGamePhase() {
+        const moveCount = game.history().length;
+        if (moveCount < 10) return 'opening';
+        if (moveCount < 30) return 'middlegame';
+        return 'endgame';
     }
+
+    const openingBook = {
+        "d4": "The London? Already playing it safe?",
+        "e4": "King’s Pawn. Tutorial move detected.",
+        "d4 d5 c4": "Queen’s Gambit. You think you’re in theory now?",
+        "e4 c5": "Sicilian. At least you're trying.",
+        "e4 e5 Nf3 Nc6 Bb5": "Ruy Lopez. Safe choice.",
+        "e4 e6": "French Defense. You chose suffering early."
+    };
+
+    const situationalTalk = {
+        botWinning: [
+            "This is slipping away from you.",
+            "You're slowly getting crushed.",
+            "I barely need to think anymore.",
+            "This is already winning."
+        ],
+        playerWinning: [
+            "Temporary advantage. Nothing more.",
+            "Enjoy it while it lasts.",
+            "Even bad positions are recoverable—for me.",
+            "Interesting... for now."
+        ],
+        check: [
+            "Check.",
+            "You're in check.",
+            "That king is uncomfortable.",
+            "Respond correctly."
+        ],
+        general: [
+            "Interesting move.",
+            "You're playing moves, at least.",
+            "Hmm.",
+            "We'll see."
+        ],
+        moveSpecific: {
+            capture: [
+                "You took something. Not bad.",
+                "Trades already?",
+                "That capture has consequences.",
+                "Okay, aggressive."
+            ],
+            castle: [
+                "You finally castled.",
+                "King safety achieved... late.",
+                "Standard move.",
+                "Better late than never."
+            ],
+            promotion: [
+                "A promotion. Now things change.",
+                "New queen. Same problems.",
+                "Let’s see if you can use it.",
+                "That matters."
+            ],
+            check_given: [
+                "You gave a check.",
+                "Checks are easy.",
+                "That changes little.",
+                "Not threatening."
+            ]
+        },
+        phase: {
+            opening: [
+                "Still in the opening.",
+                "Book knowledge time.",
+                "Don’t drift early."
+            ],
+            middlegame: [
+                "Now it gets real.",
+                "Calculation starts here.",
+                "This is where mistakes happen."
+            ],
+            endgame: [
+                "Endgame now.",
+                "Precision matters.",
+                "Let’s see technique."
+            ]
+        }
+    };
 
     function getBotCommentary(lastMove = null) {
 
-        if (Math.random() < 0.15) return "";
+        if (Math.random() < 0.12) return "";
 
         const history = game.history().join(' ');
         if (openingBook[history]) return openingBook[history];
 
-        if (swing > 1.5) return "That move just made things worse for you.";
-        if (swing < -1.5) return "Okay, that was actually decent.";
+        if (evalSwing > 1.5) return "That just made things worse for you.";
+        if (evalSwing < -1.5) return "Okay, that was actually decent.";
 
         const context = getMoveContext(lastMove);
         if (context && situationalTalk.moveSpecific[context]) {
@@ -190,7 +204,7 @@ $(document).ready(function() {
             return pickLine(situationalTalk.playerWinning);
         }
 
-        if (Math.random() < 0.3) {
+        if (Math.random() < 0.25) {
             const phase = getGamePhase();
             return pickLine(situationalTalk.phase[phase]);
         }
@@ -198,42 +212,43 @@ $(document).ready(function() {
         return pickLine(situationalTalk.general);
     }
 
+    /* =========================
+       END COMMENTARY SECTION
+       ========================= */
+
     try {
         engine = new Worker('./stockfish-18-lite-single.js');
         engine.postMessage('uci');
     } catch (e) {
-        $('#status').text('Engine failed to load.');
+        $('#status').text('Engine Error');
     }
 
-    if (engine) {
-        engine.onmessage = function(e) {
-            const line = e.data;
+    engine.onmessage = function(e) {
+        const line = e.data;
 
-            if (line.includes('score cp')) {
-                const parts = line.split(' ');
-                const newEval = parseInt(parts[parts.indexOf('cp') + 1]) / 100;
-                updateEvalTrend(newEval);
-                currentEval = newEval;
-            }
+        if (line.includes('score cp')) {
+            const parts = line.split(' ');
+            currentEval = parseInt(parts[parts.indexOf('cp') + 1]) / 100;
+            updateEvalTrend(currentEval); // IMPORTANT ADDITION
+        }
 
-            if (line.startsWith('bestmove')) {
-                const m = line.split(' ')[1];
+        if (line.startsWith('bestmove')) {
+            const m = line.split(' ')[1];
 
-                const move = game.move({
-                    from: m.substring(0, 2),
-                    to: m.substring(2, 4),
-                    promotion: 'q'
-                });
+            const move = game.move({
+                from: m.substring(0, 2),
+                to: m.substring(2, 4),
+                promotion: 'q'
+            });
 
-                board.position(game.fen());
-                $('#status').text('Your turn');
+            board.position(game.fen());
+            $('#status').text('Your turn');
 
-                $('#trashTalk').fadeOut(100, function() {
-                    $(this).text('"' + getBotCommentary(move) + '"').fadeIn(100);
-                });
-            }
-        };
-    }
+            $('#trashTalk').fadeOut(100, function() {
+                $(this).text('"' + getBotCommentary(move) + '"').fadeIn(100);
+            });
+        }
+    };
 
     function onDrop(source, target) {
         const move = game.move({
@@ -242,7 +257,7 @@ $(document).ready(function() {
             promotion: 'q'
         });
 
-        if (move === null) return 'snapback';
+        if (!move) return 'snapback';
 
         $('#status').text('Bot thinking...');
 
@@ -265,8 +280,7 @@ $(document).ready(function() {
     $('#resetBtn').on('click', function() {
         game.reset();
         board.start();
-        $('#status').text('New Game');
-        $('#trashTalk').text('"Try to last longer this time."');
+        $('#trashTalk').text('"Let’s see if you can do better this time."');
     });
 
 });
