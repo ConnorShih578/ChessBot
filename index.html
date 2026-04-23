@@ -2,114 +2,130 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Chess vs Stockfish 18</title>
+    <title>Trash Talk Chess Bot</title>
 
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.css">
+    <!-- Chessboard.js -->
+    <link rel="stylesheet" href="https://chessboardjs.com/css/chessboard-1.0.0.min.css">
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://chessboardjs.com/js/chessboard-1.0.0.min.js"></script>
+
+    <!-- Chess.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.13.4/chess.min.js"></script>
 
     <style>
-        body { font-family: sans-serif; display: flex; flex-direction: column; align-items: center; background: #f0f2f5; padding-top: 20px; }
-        #board { width: 400px; max-width: 95vw; border: 4px solid #333; box-shadow: 0 5px 15px rgba(0,0,0,0.2); }
-        .info { margin-top: 20px; text-align: center; }
-        #status { font-weight: bold; margin-bottom: 10px; }
-        /* Trash Talk Box */
-        #trashTalk { 
-            font-style: italic; color: #555; background: white; padding: 10px; 
-            border-radius: 8px; border: 1px solid #ccc; margin-bottom: 15px; min-height: 20px; width: 380px;
+        body {
+            font-family: Arial;
+            text-align: center;
+            background: #111;
+            color: white;
         }
-        button { padding: 10px 25px; cursor: pointer; background: #2c3e50; color: white; border: none; border-radius: 4px; }
+        #board {
+            width: 400px;
+            margin: 20px auto;
+        }
+        #status {
+            margin-top: 10px;
+        }
+        #trashTalk {
+            margin-top: 20px;
+            font-style: italic;
+            color: #ff6b6b;
+            min-height: 40px;
+        }
+        button {
+            margin-top: 15px;
+            padding: 8px 16px;
+            background: #333;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
     </style>
 </head>
+
 <body>
 
-    <div id="trashTalk">"I'm nerfing myself so this is actually a fair game."</div>
-    <div id="board"></div>
+<h2>Trash Talk Chess Bot</h2>
 
-    <div class="info">
-        <p id="status">Loading Engine...</p>
-        <button id="resetBtn">New Game</button>
-    </div>
+<div id="board"></div>
+<div id="status">Loading...</div>
+<div id="trashTalk">"Let's see what you've got."</div>
+<button id="resetBtn">Reset Game</button>
 
-    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>
+<script>
+$(document).ready(function() {
 
-    <script>
-        $(document).ready(function() {
     var board = null;
     var game = new Chess();
     var engine = null;
-    var currentEval = 0.0;
 
+    var currentEval = 0.0;
     let lastEval = 0;
     let swing = 0;
     let lastLine = "";
 
     const openingBook = {
-        "d4": "The London System? Or a Gambit? Either way, the real me is yawning.",
-        "e4": "King's Pawn. Classic. I've played this 10,000 times on my main 3000 Elo account.",
-        "d4 d5 c4": "The Queen's Gambit? I'll allow it.",
-        "e4 c5": "Sicilian? Bold. My prep goes 30 moves deep.",
-        "e4 e5 Nf3 Nc6 Bb5": "Ruy Lopez. Solid... and a bit boring.",
-        "e4 e6": "The French Defense. Hope you like suffering."
+        "e4": "King's Pawn. I've crushed this line thousands of times.",
+        "d4": "A positional start. Let's see if you understand it.",
+        "e4 e5 Nf3 Nc6 Bb5": "Ruy Lopez. Safe. Predictable.",
+        "d4 d5 c4": "Queen's Gambit. You watched a video, didn't you?"
     };
 
     const situationalTalk = {
         botWinning: [
-            "Even at 10% power, I'm still outplaying you.",
-            "I'm dragging this out for entertainment.",
-            "The eval says it's over. I'm just being polite now."
+            "I'm barely trying and you're still collapsing.",
+            "This is getting one-sided.",
+            "The position is winning. You just don't see it yet."
         ],
         playerWinning: [
-            "You're only ahead because I'm limited.",
-            "Enjoy this moment. It won't last.",
-            "Even broken clocks are right sometimes."
+            "Temporary luck. Nothing more.",
+            "You're ahead... which makes this more embarrassing when you lose.",
+            "Even bad positions are winnable—for me."
         ],
         check: [
-            "Check. Try to keep up.",
-            "You're in check. Again.",
-            "This is getting uncomfortable for you."
+            "Check. Stay focused.",
+            "You're in check. Try not to panic.",
+            "That king looks uncomfortable."
         ],
         general: [
-            "I'm barely paying attention.",
-            "This feels like a warm-up game.",
-            "I've seen worse. Not often, though.",
-            "You're trying. That's something."
+            "Interesting move.",
+            "You're thinking... I assume.",
+            "I've seen worse. Not often, though."
         ],
         moveSpecific: {
             capture: [
-                "Oh nice, you found a capture.",
-                "Trading pieces like you understand things. Bold.",
-                "Sure, take it. That helps me."
+                "You found a capture. Impressive... for you.",
+                "Trading pieces? Let's see who benefits.",
+                "Sure, take it. That helps me more."
             ],
             castle: [
-                "Castling now? Bit late.",
-                "Safety first. Smart... for once.",
-                "Finally protecting your king."
+                "You finally castled.",
+                "King safety. A bit late.",
+                "Textbook move. Predictable."
             ],
             promotion: [
-                "A promotion? Cute.",
-                "New queen, same problems.",
-                "Let’s see how fast you lose that."
+                "A promotion? Now it gets interesting.",
+                "New queen. Same problems.",
+                "Let's see if you can use it properly."
             ],
             check_given: [
-                "You found a check. Gold star.",
+                "You gave a check. Good job.",
                 "Checks are easy. Winning isn't.",
-                "That changes nothing."
+                "That changes very little."
             ]
         },
         phase: {
             opening: [
-                "We're still in theory. Try to keep up.",
-                "This is the easy part."
+                "We're still in theory.",
+                "Try not to mess up the opening."
             ],
             middlegame: [
-                "Now it gets complicated.",
-                "This is where games are decided."
+                "This is where things fall apart.",
+                "Now it's about calculation."
             ],
             endgame: [
-                "Endgames expose everything.",
-                "Let’s see your technique."
+                "Endgame. Precision matters now.",
+                "Let's see your technique."
             ]
         }
     };
@@ -119,9 +135,15 @@
         do {
             line = list[Math.floor(Math.random() * list.length)];
         } while (line === lastLine && list.length > 1);
-
         lastLine = line;
         return line;
+    }
+
+    function getGamePhase() {
+        const moveCount = game.history().length;
+        if (moveCount < 10) return 'opening';
+        if (moveCount < 30) return 'middlegame';
+        return 'endgame';
     }
 
     function getMoveContext(move) {
@@ -136,62 +158,43 @@
         return 'normal';
     }
 
-    function getGamePhase() {
-        const moveCount = game.history().length;
-        if (moveCount < 10) return 'opening';
-        if (moveCount < 30) return 'middlegame';
-        return 'endgame';
-    }
-
     function updateEvalTrend(newEval) {
         swing = newEval - lastEval;
         lastEval = newEval;
     }
 
     function getBotCommentary(lastMove = null) {
+
+        if (Math.random() < 0.15) return "";
+
         const history = game.history().join(' ');
-
-        // Occasionally say nothing
-        if (Math.random() < 0.1) return "";
-
-        // Rare special line
-        if (Math.random() < 0.05) {
-            return "My real engine sees something devastating here.";
-        }
-
-        // Opening lines
         if (openingBook[history]) return openingBook[history];
 
-        // Big eval swings
-        if (swing > 1.5) return "You just blundered. That was rough.";
-        if (swing < -1.5) return "Okay... that was actually decent.";
+        if (swing > 1.5) return "That move just made things worse for you.";
+        if (swing < -1.5) return "Okay, that was actually decent.";
 
-        // Move-specific reactions
         const context = getMoveContext(lastMove);
         if (context && situationalTalk.moveSpecific[context]) {
             return pickLine(situationalTalk.moveSpecific[context]);
         }
 
-        // Check state
         if (game.in_check()) {
             return pickLine(situationalTalk.check);
         }
 
-        // Eval-based
         if (currentEval < -2.0) {
             return pickLine(situationalTalk.botWinning);
         }
+
         if (currentEval > 2.0) {
             return pickLine(situationalTalk.playerWinning);
         }
 
-        // Phase-based flavor (30% chance)
         if (Math.random() < 0.3) {
             const phase = getGamePhase();
             return pickLine(situationalTalk.phase[phase]);
         }
 
-        // Default
         return pickLine(situationalTalk.general);
     }
 
@@ -199,26 +202,23 @@
         engine = new Worker('./stockfish-18-lite-single.js');
         engine.postMessage('uci');
     } catch (e) {
-        $('#status').text('Engine Error: Worker failed to load.');
+        $('#status').text('Engine failed to load.');
     }
 
     if (engine) {
         engine.onmessage = function(e) {
             const line = e.data;
 
-            if (line.includes('uciok') || line.includes('readyok')) {
-                $('#status').text('Ready! Your turn.');
-            }
-
             if (line.includes('score cp')) {
                 const parts = line.split(' ');
-                const evalCp = parseInt(parts[parts.indexOf('cp') + 1]) / 100;
-                currentEval = evalCp;
-                updateEvalTrend(currentEval);
+                const newEval = parseInt(parts[parts.indexOf('cp') + 1]) / 100;
+                updateEvalTrend(newEval);
+                currentEval = newEval;
             }
 
             if (line.startsWith('bestmove')) {
                 const m = line.split(' ')[1];
+
                 const move = game.move({
                     from: m.substring(0, 2),
                     to: m.substring(2, 4),
@@ -228,19 +228,15 @@
                 board.position(game.fen());
                 $('#status').text('Your turn');
 
-                const lineText = getBotCommentary(move);
-
-                if (lineText) {
-                    $('#trashTalk').fadeOut(100, function() {
-                        $(this).text('"' + lineText + '"').fadeIn(100);
-                    });
-                }
+                $('#trashTalk').fadeOut(100, function() {
+                    $(this).text('"' + getBotCommentary(move) + '"').fadeIn(100);
+                });
             }
         };
     }
 
     function onDrop(source, target) {
-        var move = game.move({
+        const move = game.move({
             from: source,
             to: target,
             promotion: 'q'
@@ -248,18 +244,14 @@
 
         if (move === null) return 'snapback';
 
-        $('#status').text('Bot pretending to think...');
+        $('#status').text('Bot thinking...');
 
-        const lineText = getBotCommentary(move);
-        if (lineText) {
-            $('#trashTalk').text('"' + lineText + '"');
-        }
+        const line = getBotCommentary(move);
+        if (line) $('#trashTalk').text('"' + line + '"');
 
         setTimeout(function() {
-            if (engine) {
-                engine.postMessage('position fen ' + game.fen());
-                engine.postMessage('go depth 15');
-            }
+            engine.postMessage('position fen ' + game.fen());
+            engine.postMessage('go depth 15');
         }, 100);
     }
 
@@ -267,20 +259,18 @@
         draggable: true,
         position: 'start',
         onDrop: onDrop,
-        pieceTheme: 'https://chessboardjs.com{piece}.png'
+        pieceTheme: 'https://chessboardjs.com/img/chesspieces/wikipedia/{piece}.png'
     });
 
     $('#resetBtn').on('click', function() {
         game.reset();
         board.start();
-        lastEval = 0;
-        swing = 0;
-        lastLine = "";
-
-        $('#status').text('New Game Started');
-        $('#trashTalk').text('"Let\'s see if you can last longer this time."');
+        $('#status').text('New Game');
+        $('#trashTalk').text('"Try to last longer this time."');
     });
+
 });
-    </script>
+</script>
+
 </body>
 </html>
