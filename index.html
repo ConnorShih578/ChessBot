@@ -3,7 +3,7 @@
 <body>
     <script>
         // 1. Initialize the worker
-        const engine = new Worker('stockfish.js');
+        const engine = new Worker('stockfish-18-lite-single.js');
 
         // 2. Listen for the result
         engine.onmessage = (event) => {
