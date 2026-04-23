@@ -1,147 +1,66 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Stockfish 18 Chess</title>
-    
-    <!-- CSS for the Board -->
+    <title>Chess Test</title>
     <link rel="stylesheet" href="https://jsdelivr.net">
-    
     <style>
-        body { 
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            display: flex; 
-            flex-direction: column; 
-            align-items: center; 
-            background-color: #f4f4f9; 
-            padding: 20px;
-        }
-        #myBoard { 
-            width: 400px; 
-            max-width: 90vw;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.2);
-            background-color: #ddd; /* Fallback color */
-        }
-        .info-panel {
-            margin-top: 20px;
-            text-align: center;
-        }
-        #status {
-            font-weight: bold;
-            color: #333;
-            margin-bottom: 10px;
-        }
-        button {
-            padding: 10px 20px;
-            font-size: 16px;
-            cursor: pointer;
-            background-color: #2c3e50;
-            color: white;
-            border: none;
-            border-radius: 4px;
-        }
-        button:hover { background-color: #34495e; }
+        body { display: flex; flex-direction: column; align-items: center; padding-top: 50px; font-family: sans-serif; }
+        #myBoard { width: 400px; height: 400px; border: 2px solid #333; background: #eee; }
     </style>
 </head>
 <body>
-
     <div id="myBoard"></div>
+    <p id="status">Status: Initializing...</p>
+    <button onclick="location.reload()">Reload Page</button>
 
-    <div class="info-panel">
-        <p id="status">Loading Engine...</p>
-        <button id="resetBtn">New Game</button>
-    </div>
-
-    <!-- Scripts (In order) -->
     <script src="https://cloudflare.com"></script>
     <script src="https://jsdelivr.net"></script>
     <script src="https://cloudflare.com"></script>
 
     <script>
         $(document).ready(function() {
-            var board = null;
+            console.log("Step 1: HTML Loaded");
             var game = new Chess();
-            var engine;
+            var board = null;
+            var engine = null;
 
-            // 1. Initialize Engine Worker
             try {
+                // Initialize the worker
                 engine = new Worker('stockfish-18-lite-single.js');
-                engine.postMessage('uci'); // Initialize UCI
-            } catch (e) {
-                $('#status').text('Error: Engine worker failed.');
-                console.error(e);
+                console.log("Step 2: Worker Script Found");
+                
+                engine.onmessage = function(e) {
+                    console.log("Engine Message:", e.data);
+                    if (e.data.startsWith('bestmove')) {
+                        var move = e.data.split(' ');
+                        game.move({ from: move.substring(0, 2), to: move.substring(2, 4), promotion: 'q' });
+                        board.position(game.fen());
+                        $('#status').text('Your Turn');
+                    }
+                };
+
+                // Check if engine is ready
+                engine.postMessage('uci');
+                setTimeout(() => { $('#status').text('Ready to Play!'); }, 1000);
+
+            } catch (err) {
+                console.error("Step 2 FAILED:", err);
+                $('#status').text('Error: Worker blocked or missing.');
             }
 
-            // 2. Handle moves
-            function onDrop(source, target) {
-                var move = game.move({
-                    from: source,
-                    to: target,
-                    promotion: 'q' // Always promote to queen for simplicity
-                });
-
-                if (move === null) return 'snapback';
-
-                updateStatus();
-
-                // Tell Stockfish to think
-                window.setTimeout(function() {
-                    engine.postMessage('position fen ' + game.fen());
-                    engine.postMessage('go depth 15');
-                }, 250);
-            }
-
-            // 3. Update the UI
-            function updateStatus() {
-                var status = '';
-                var moveColor = (game.turn() === 'b') ? 'Black' : 'White';
-
-                if (game.in_checkmate()) {
-                    status = 'Game over, ' + moveColor + ' is in checkmate.';
-                } else if (game.in_draw()) {
-                    status = 'Game over, drawn position';
-                } else {
-                    status = (game.turn() === 'w' ? 'Your Turn' : 'Stockfish is thinking...');
-                }
-
-                $('#status').text(status);
-            }
-
-            // 4. Board Config
-            var config = {
+            board = Chessboard('myBoard', {
                 draggable: true,
                 position: 'start',
-                onDrop: onDrop,
-                // Loads piece images from CDN so you don't need a local folder
-                pieceTheme: 'https://chessboardjs.com{piece}.png'
-            };
-
-            board = Chessboard('myBoard', config);
-            updateStatus();
-
-            // 5. Catch Engine Messages
-            engine.onmessage = function(e) {
-                if (e.data.startsWith('bestmove')) {
-                    var moveLine = e.data.split(' ');
-                    var bestMove = moveLine[1]; // e.g. "e2e4"
-
-                    game.move({
-                        from: bestMove.substring(0, 2),
-                        to: bestMove.substring(2, 4),
-                        promotion: 'q'
-                    });
-
-                    board.position(game.fen());
-                    updateStatus();
+                pieceTheme: 'https://chessboardjs.com{piece}.png',
+                onDrop: function(source, target) {
+                    var move = game.move({ from: source, to: target, promotion: 'q' });
+                    if (move === null) return 'snapback';
+                    
+                    $('#status').text('Stockfish thinking...');
+                    engine.postMessage('position fen ' + game.fen());
+                    engine.postMessage('go depth 15');
                 }
-            };
-
-            // 6. Reset Button
-            $('#resetBtn').on('click', function() {
-                game.reset();
-                board.start();
-                updateStatus();
             });
         });
     </script>
