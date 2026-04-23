@@ -36,88 +36,139 @@
 
     <script>
         $(document).ready(function() {
-            var board = null;
-            var game = new Chess();
-            var engine = null;
-            var currentEval = 0.0;
+    var board = null;
+    var game = new Chess();
+    var engine = null;
+    var currentEval = 0.0;
 
-            const openingBook = {
-                "d4 d5 c4": "The Queen's Gambit? I'll allow it. In a real match, I'd have crushed this by now, but this bot is a bit worse than the real me, obviously.",
-                "e4 c5": "Sicilian? Bold. My real-life prep goes 30 moves deep. This bot is just for your training.",
-                "e4 e5 Nf3 Nc6 Bb5": "Ruy Lopez. Classic. I'm playing the 'limited' version of my theory so you don't quit.",
-                "e4 e6": "The French Defense. My real version would have you resigning by move 10."
-            };
+    // Opening keys must match game.history().join(' ') exactly
+    const openingBook = {
+        "d4": "The London System? Or a Gambit? Either way, the real me is yawning.",
+        "e4": "King's Pawn. Classic. I've played this 10,000 times on my main 3000 Elo account.",
+        "d4 d5 c4": "The Queen's Gambit? I'll allow it. This bot is a bit worse than the real me, obviously.",
+        "e4 c5": "Sicilian? Bold. My real-life prep goes 30 moves deep. This bot is just for your training.",
+        "e4 e5 Nf3 Nc6 Bb5": "Ruy Lopez. A solid choice for people who are afraid of fun.",
+        "e4 e6": "The French Defense. My real version would have you resigning by move 10."
+    };
 
-            const situationalTalk = {
-                botWinning: ["Even at 10% power, I'm still outplaying you. Imagine if the real me was playing.", "I'm nerfing my calculations so the game lasts longer. You're welcome."],
-                playerWinning: ["You're only winning because this script is capped. The real me is 3000 Elo, remember that.", "My 'beginner mode' must be glitching. Usually, I'd have taken your Queen."],
-                check: ["Check. I'm using about 2% of my brain for this.", "You're in check. I'm literally eating a sandwich while this bot plays you."],
-                general: ["I'm basically a Grandmaster in real life. This bot is just my public demo.", "I have 3000 Elo on my main account. This is just my 'messing around' bot."]
-            };
+    const situationalTalk = {
+        botWinning: [
+            "Even at 10% power, I'm still outplaying you. Imagine if the real me was playing.",
+            "I'm nerfing my calculations so the game lasts longer. You're welcome.",
+            "The engine says I'm winning. The real me would have finished this already.",
+            "Is this a chess game or a charity event? I'm feeling generous today."
+        ],
+        playerWinning: [
+            "You're only winning because this script is capped. The real me is 3000 Elo.",
+            "My 'beginner mode' must be glitching. Usually, I'd have taken your Queen.",
+            "Enjoy this lead. It's the closest you'll ever get to beating the real version of me.",
+            "I'm letting you win to keep the game interesting. Don't get used to it."
+        ],
+        check: [
+            "Check. I'm using about 2% of my brain for this.",
+            "You're in check. I'm literally eating a sandwich while this bot plays you.",
+            "Watch your head. My 3000 Elo logic says you're in trouble.",
+            "Cute check. Changes nothing."
+        ],
+        general: [
+            "I'm basically a Grandmaster in real life. This bot is just my public demo.",
+            "I have 3000 Elo on my main account. This is just my 'messing around' bot.",
+            "Are you a streamer? Because this game belongs on a 'How to Lose' highlight reel.",
+            "I've seen better moves in a game of checkers. No offense.",
+            "I'm thinking about my dinner plans. This game isn't taking much focus."
+        ]
+    };
 
-            function getBotCommentary() {
-                const history = game.history().join(' ');
-                if (openingBook[history]) return openingBook[history];
-                if (game.in_check()) return situationalTalk.check[Math.floor(Math.random() * situationalTalk.check.length)];
-                if (currentEval < -2.0) return situationalTalk.botWinning[Math.floor(Math.random() * situationalTalk.botWinning.length)];
-                if (currentEval > 2.0) return situationalTalk.playerWinning[Math.floor(Math.random() * situationalTalk.playerWinning.length)];
-                return situationalTalk.general[Math.floor(Math.random() * situationalTalk.general.length)];
+    function getBotCommentary() {
+        const history = game.history().join(' ');
+        
+        // 1. Check for Openings (Matches exact history strings)
+        if (openingBook[history]) return openingBook[history];
+        
+        // 2. Check for Check
+        if (game.in_check()) {
+            const list = situationalTalk.check;
+            return list[Math.floor(Math.random() * list.length)];
+        }
+        
+        // 3. Check Eval (Bot winning = negative eval since SF plays Black here)
+        if (currentEval < -2.0) {
+            const list = situationalTalk.botWinning;
+            return list[Math.floor(Math.random() * list.length)];
+        }
+        if (currentEval > 2.0) {
+            const list = situationalTalk.playerWinning;
+            return list[Math.floor(Math.random() * list.length)];
+        }
+        
+        // 4. Fallback to random general elitism
+        const list = situationalTalk.general;
+        return list[Math.floor(Math.random() * list.length)];
+    }
+
+    try {
+        engine = new Worker('./stockfish-18-lite-single.js');
+        engine.postMessage('uci');
+    } catch (e) {
+        $('#status').text('Engine Error: Worker failed to load.');
+    }
+
+    if (engine) {
+        engine.onmessage = function(e) {
+            const line = e.data;
+            if (line.includes('uciok') || line.includes('readyok')) {
+                $('#status').text('Ready! Your turn.');
             }
-
-            try {
-                engine = new Worker('./stockfish-18-lite-single.js');
-                engine.postMessage('uci');
-            } catch (e) {
-                $('#status').text('Engine Error: Worker failed to load.');
+            if (line.includes('score cp')) {
+                const parts = line.split(' ');
+                currentEval = parseInt(parts[parts.indexOf('cp') + 1]) / 100;
             }
+            if (line.startsWith('bestmove')) {
+                const m = line.split(' ')[1];
+                game.move({ from: m.substring(0, 2), to: m.substring(2, 4), promotion: 'q' });
+                board.position(game.fen());
+                $('#status').text('Your turn');
+                
+                // Speak after bot moves
+                $('#trashTalk').fadeOut(100, function() {
+                    $(this).text('"' + getBotCommentary() + '"').fadeIn(100);
+                });
+            }
+        };
+    }
 
+    function onDrop(source, target) {
+        var move = game.move({ from: source, to: target, promotion: 'q' });
+        if (move === null) return 'snapback';
+        
+        $('#status').text('Bot pretending to think...');
+        
+        // Also check for user's opening moves
+        const userLine = getBotCommentary();
+        if (userLine) $('#trashTalk').text('"' + userLine + '"');
+
+        setTimeout(function() {
             if (engine) {
-                engine.onmessage = function(e) {
-                    const line = e.data;
-                    if (line.includes('uciok') || line.includes('readyok')) {
-                        $('#status').text('Ready! Your turn.');
-                    }
-                    // Capture Eval
-                    if (line.includes('score cp')) {
-                        const parts = line.split(' ');
-                        currentEval = parseInt(parts[parts.indexOf('cp') + 1]) / 100;
-                    }
-                    if (line.startsWith('bestmove')) {
-                        const m = line.split(' ')[1];
-                        game.move({ from: m.substring(0, 2), to: m.substring(2, 4), promotion: 'q' });
-                        board.position(game.fen());
-                        $('#status').text('Your turn');
-                        $('#trashTalk').text('"' + getBotCommentary() + '"');
-                    }
-                };
+                engine.postMessage('position fen ' + game.fen());
+                engine.postMessage('go depth 15');
             }
+        }, 100);
+    }
 
-            function onDrop(source, target) {
-                var move = game.move({ from: source, to: target, promotion: 'q' });
-                if (move === null) return 'snapback';
-                $('#status').text('Bot pretending to think...');
-                setTimeout(function() {
-                    if (engine) {
-                        engine.postMessage('position fen ' + game.fen());
-                        engine.postMessage('go depth 15');
-                    }
-                }, 100);
-            }
+    board = Chessboard('board', {
+        draggable: true,
+        position: 'start',
+        onDrop: onDrop,
+        pieceTheme: 'https://chessboardjs.com{piece}.png'
+    });
 
-            board = Chessboard('board', {
-                draggable: true,
-                position: 'start',
-                onDrop: onDrop,
-                pieceTheme: 'https://chessboardjs.com/img/chesspieces/wikipedia/{piece}.png'
-            });
-
-            $('#resetBtn').on('click', function() {
-                game.reset();
-                board.start();
-                $('#status').text('New Game Started');
-                $('#trashTalk').text('"Let\'s see if you can last longer this time."');
-            });
-        });
+    $('#resetBtn').on('click', function() {
+        game.reset();
+        board.start();
+        $('#status').text('New Game Started');
+        $('#trashTalk').text('"Let\'s see if you can last longer this time."');
+    });
+});
     </script>
 </body>
 </html>
