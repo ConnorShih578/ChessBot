@@ -4,23 +4,24 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Chess vs Timmy</title>
+
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.css">
+
     <style>
         body { font-family: sans-serif; display: flex; flex-direction: column; align-items: center; background: #f0f2f5; padding-top: 20px; }
         #board { width: 400px; max-width: 95vw; border: 4px solid #333; box-shadow: 0 5px 15px rgba(0,0,0,0.2); }
         .info { margin-top: 20px; text-align: center; }
         #status { font-weight: bold; margin-bottom: 10px; }
+        /* Trash Talk Box */
         #trashTalk { 
             font-style: italic; color: #555; background: white; padding: 10px; 
             border-radius: 8px; border: 1px solid #ccc; margin-bottom: 15px; min-height: 20px; width: 380px;
         }
         button { padding: 10px 25px; cursor: pointer; background: #2c3e50; color: white; border: none; border-radius: 4px; }
-        .nav-link { margin-bottom: 15px; text-decoration: none; color: #2c3e50; font-weight: bold; }
     </style>
 </head>
 <body>
 
-    <a href="Cooper.html" class="nav-link">Switch to Cooper (The Nice Bot)</a>
     <div id="trashTalk">"I'm nerfing myself so this is actually a fair game."</div>
     <div id="board"></div>
 
@@ -28,118 +29,118 @@
         <p id="status">Loading Engine...</p>
         <button id="resetBtn">New Game</button>
     </div>
-    <p style="font-size: 0.8em; color: #666;">JTK Games Prototype - Timmy v1.2</p>
+    <p>This version of the bot is still a prototype, checkmates are not announced.</p>
 
     <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.css"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>
 
     <script>
         $(document).ready(function() {
             var board = null;
             var game = new Chess();
-            var engine = new Worker('./stockfish-18-lite-single.js');
+            var engine = null;
             var currentEval = 0.0;
 
             const openingBook = {
-                "d4 d5 c4": "The Queen's Gambit? I'll allow it. In a real match, I'd have crushed this by now.",
-                "e4 c5": "Sicilian? Bold. My real-life prep goes 30 moves deep.",
+                "d4 d5 c4": "The Queen's Gambit? I'll allow it. In a real match, I'd have crushed this by now, but this bot is a bit worse than the real me, obviously.",
+                "e4 c5": "Sicilian? Bold. My real-life prep goes 30 moves deep. This bot is just for your training.",
                 "e4 e5 Nf3 Nc6 Bb5": "Ruy Lopez. Classic, but boring.",
                 "e4 e6": "The French Defense. The real life Timmy would have you resigning by move 10."
             };
 
             const situationalTalk = {
-                botWinning: ["Even at 10% power, I'm still outplaying you.", "I'm nerfing my calculations so the game lasts longer. You're welcome."],
-                playerWinning: ["You're only winning because this script is capped.", "My 'beginner mode' must be glitching. Usually, I'd have taken your Queen."],
-                check: ["Check. I'm using about 2% of my brain for this.", "You're in check. I'm basically standing behind you, watching you fail."],
-                general: ["I'm basically a Grandmaster. This bot is just my public demo.", "I have 3000 Elo on my main account.", "Are you going to do something? This is getting boring."]
+                botWinning: ["Even at 10% power, I'm still outplaying you. Imagine if the real Timmy was playing.", "I'm nerfing my calculations so the game lasts longer. You're welcome."],
+                playerWinning: ["You're only winning because this script is capped. The real Timmy is 3000 Elo, remember that.", "My 'beginner mode' must be glitching. Usually, I'd have taken your Queen."],
+                check: ["Check. I'm using about 2% of my brain for this.", "You're in check. I'm literally(probably)standing behind you, seeing how you're doing while this bot plays you."],
+                general: ["I'm basically a Grandmaster in real life. This bot is just my public demo.", "I have 3000 Elo on my main account. This is just my 'messing around' bot.", "Are you going to do something? This game's getting boring."]
             };
 
             function getBotCommentary() {
                 const history = game.history().join(' ');
-                
-                // 1. Checkmate/Game Over check
+
+                // 1. Check for Checkmate first
                 if (game.in_checkmate()) {
                     return game.turn() === 'w' ? 
-                        "Checkmate. As expected. I'll go back to playing Grandmasters now." : 
-                        "Checkmate? Impossible. This script must have a bug. The real Timmy never loses.";
+                        "Checkmate. As expected. Go practice your tactics." : 
+                        "Checkmate?! The engine glitched. I'm still 3000 Elo.";
                 }
 
                 // 2. Opening Book
                 if (openingBook[history]) return openingBook[history];
                 
-                // 3. Check
+                // 3. Situational Checks
                 if (game.in_check()) return situationalTalk.check[Math.floor(Math.random() * situationalTalk.check.length)];
                 
-                // 4. FIXED EVAL LOGIC:
-                // When currentEval is POSITIVE, the Bot (Black) is winning.
-                // When currentEval is NEGATIVE, the Player (White) is winning.
+                // 4. Fixed Evaluation Gates:
+                // Since Timmy is Black, positive eval from Stockfish's turn means he is winning.
                 if (currentEval > 1.2) return situationalTalk.botWinning[Math.floor(Math.random() * situationalTalk.botWinning.length)];
                 if (currentEval < -1.2) return situationalTalk.playerWinning[Math.floor(Math.random() * situationalTalk.playerWinning.length)];
                 
-                // 5. General Talk
                 return situationalTalk.general[Math.floor(Math.random() * situationalTalk.general.length)];
             }
 
-            function checkGameOver() {
-                if (game.in_checkmate()) {
-                    let winner = game.turn() === 'w' ? "Timmy" : "You";
-                    let msg = winner === "Timmy" ? "Checkmate. As expected. Go practice." : "Checkmate?! The engine glitched. I'm still 3000 Elo.";
-                    $('#status').text('GAME OVER - ' + winner + ' wins!');
-                    $('#trashTalk').text('"' + msg + '"');
-                    return true;
-                }
-                if (game.in_draw() || game.in_stalemate()) {
-                    $('#status').text('GAME OVER - Draw');
-                    $('#trashTalk').text('"A draw? I'll let you have that one. I was bored anyway."');
-                    return true;
-                }
-                return false;
+            try {
+                engine = new Worker('./stockfish-18-lite-single.js');
+                engine.postMessage('uci');
+            } catch (e) {
+                $('#status').text('Engine Error: Worker failed to load.');
             }
 
-            engine.onmessage = function(e) {
-                const line = e.data;
-                if (line.includes('score cp')) {
-                    const parts = line.split(' ');
-                    let score = parseInt(parts[parts.indexOf('cp') + 1]) / 100;
-                    // If it's the bot's turn (Black), Stockfish might report positive for its own advantage.
-                    // We flip it so Positive ALWAYS = White, Negative ALWAYS = Black.
-                    currentEval = (game.turn() === 'b') ? -score : score;
-                }
-                if (line.startsWith('bestmove')) {
-                    const m = line.split(' ')[1];
-                    game.move({ from: m.substring(0, 2), to: m.substring(2, 4), promotion: 'q' });
-                    board.position(game.fen());
-                    if (!checkGameOver()) {
+            if (engine) {
+                engine.onmessage = function(e) {
+                    const line = e.data;
+                    if (line.includes('uciok') || line.includes('readyok')) {
+                        $('#status').text('Ready! Your turn.');
+                    }
+                    // Capture Eval
+                    if (line.includes('score cp')) {
+                        const parts = line.split(' ');
+                        currentEval = parseInt(parts[parts.indexOf('cp') + 1]) / 100;
+                    }
+                    if (line.startsWith('bestmove')) {
+                        const m = line.split(' ')[1];
+                        game.move({ from: m.substring(0, 2), to: m.substring(2, 4), promotion: 'q' });
+                        board.position(game.fen());
                         $('#status').text('Your turn');
                         $('#trashTalk').text('"' + getBotCommentary() + '"');
                     }
-                }
-            };
+                };
+            }
 
             function onDrop(source, target) {
                 var move = game.move({ from: source, to: target, promotion: 'q' });
                 if (move === null) return 'snapback';
-                if (checkGameOver()) return;
-                $('#status').text('Timmy is "thinking"...');
-                setTimeout(() => {
-                    engine.postMessage('position fen ' + game.fen());
-                    engine.postMessage('go depth 20');
+                
+                // Trigger commentary immediately if player checkmates Timmy
+                if (game.in_checkmate()) {
+                    $('#trashTalk').text('"' + getBotCommentary() + '"');
+                    $('#status').text('Checkmate! You win.');
+                    return;
+                }
+
+                $('#status').text('Bot pretending to think...');
+                setTimeout(function() {
+                    if (engine) {
+                        engine.postMessage('position fen ' + game.fen());
+                        engine.postMessage('go depth 20');
+                    }
                 }, 100);
             }
 
             board = Chessboard('board', {
-                draggable: true, position: 'start', onDrop: onDrop,
+                draggable: true,
+                position: 'start',
+                onDrop: onDrop,
                 pieceTheme: 'https://chessboardjs.com/img/chesspieces/wikipedia/{piece}.png'
             });
 
             $('#resetBtn').on('click', function() {
-                game.reset(); board.start();
+                game.reset();
+                board.start();
                 $('#status').text('New Game Started');
-                $('#trashTalk').text('"Let\'s see if you can last 10 moves."');
+                $('#trashTalk').text('"Let\'s see if you can last longer this time."');
             });
-
-            engine.postMessage('uci');
         });
     </script>
 </body>
