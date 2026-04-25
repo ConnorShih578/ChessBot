@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chess vs Koopa Troopa</title>
+    <link rel="stylesheet" href="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.css">
+    <style>
+        body { font-family: sans-serif; display: flex; flex-direction: column; align-items: center; background: #fffde7; padding-top: 20px; }
+        #board { width: 400px; max-width: 95vw; aspect-ratio: 1 / 1; border: 4px solid #fbc02d; box-shadow: 0 5px 15px rgba(0,0,0,0.2); }
+        .info { margin-top: 20px; text-align: center; }
+        #status { font-weight: bold; margin-bottom: 10px; color: #f57f17; }
+        #trashTalk { 
+            font-style: italic; color: #333; background: white; padding: 10px; 
+            border-radius: 8px; border: 2px solid #fbc02d; margin-bottom: 15px; min-height: 20px; width: 380px;
+        }
+        button { padding: 10px 25px; cursor: pointer; background: #fbc02d; color: #333; border: none; border-radius: 4px; font-weight: bold; }
+        .nav-link { margin-bottom: 15px; text-decoration: none; color: #f57f17; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+    <a href="index.html" class="nav-link">← Switch to Timmy</a>
+    <div id="trashTalk">"He he he! King Koopa Troopa, King of the Troopas is in the building!"</div>
+    <div id="board"></div>
+
+    <div class="info">
+        <p id="status">Loading Koopa Troopa...</p>
+        <button id="resetBtn">New Game</button>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <script src="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>
+
+    <script>
+        $(document).ready(function() {
+            var board = null;
+            var game = new Chess();
+            var engine = null;
+            var currentEval = 0.0;
+            var lastEval = 0.0;
+
+            const openingBook = {
+                // White Openings
+                "e4 e5 Nf3": "Ah, the King's Pawn Knight variation. Classic, like a fine Napoleon pastry. He he he!",
+                "e4 c5": "Sicilian! I like this. It’s mischievous, just like me. He he he!",
+                // Black Openings
+                "d4 e5": "Englund Gambit! Prepare to be confused! He he he!",
+                "e4 e5 Nf3 Nc6": "King's Pawn Knight variation... I've seen this in my dreams. All hail King Koopa Troopa!"
+            };
+
+            const randomFacts = [
+                "all hail King Koopa Troopa!",
+                "Did you know Napoleon Bonaparte was actually 5'6\", which was average height for the time?",
+                "Napoleon once was attacked by a colony of rabbits. It's true! He he he!",
+                "I am the King of the Troopas! My logic is as sound as the Napoleonic Code.",
+                "He he he! I'm like Napoleon in 1805, completely unstoppable!",
+                "Napoleon's second wife, Marie Louise, was the grandniece of Marie Antoinette. Random, right?"
+            ];
+
+            function getBotCommentary() {
+                const history = game.history().join(' ');
+                
+                if (game.in_checkmate()) {
+                    return game.turn() === 'w' ? 
+                        "He he he! King Koopa Troopa wins! All hail the King!" : 
+                        "我头痛！ This board is rigged. Napoleon wouldn't have played like this.";
+                }
+
+                if (game.in_check()) return "Check, whatcha gonna do about it? Cwy??";
+
+                // Blunder Detection (If eval changed significantly in his favor)
+                if ((currentEval - lastEval) > 1.5) return "He he he he he, I see You just blundered!";
+
+                if (openingBook[history]) return openingBook[history];
+
+                // Eval-based logic
+                if (currentEval < -2.5) return "我头痛！";
+                if (currentEval < -0.8) return "You think you're winning?? You're not!";
+                
+                // If the engine makes a "bad" move, it might be his "sacrifice"
+                if ((lastEval - currentEval) > 1.0) return "That was a sacrifice by the way.";
+
+                if (currentEval > 1.5) {
+                    const winLines = ["He he he, you're losing. Resign to King Koopa Troopa!!", "Ha ha, Im winning"];
+                    return winLines[Math.floor(Math.random() * winLines.length)];
+                }
+                
+                return randomFacts[Math.floor(Math.random() * randomFacts.length)];
+            }
+
+            try {
+                engine = new Worker('./stockfish-18-lite-single.js');
+                engine.postMessage('uci');
+                engine.postMessage('setoption name Skill Level value 8'); // 1300 Elo feel
+            } catch (e) {
+                $('#status').text('Engine Error.');
+            }
+
+            if (engine) {
+                engine.onmessage = function(e) {
+                    const line = e.data;
+                    if (line.includes('score cp')) {
+                        const parts = line.split(' ');
+                        lastEval = currentEval;
+                        currentEval = parseInt(parts[parts.indexOf('cp') + 1]) / 100;
+                    }
+                    if (line.startsWith('bestmove')) {
+                        const m = line.split(' ')[1];
+                        game.move({ from: m.substring(0, 2), to: m.substring(2, 4), promotion: 'q' });
+                        board.position(game.fen());
+                        $('#status').text(game.in_checkmate() ? 'GAME OVER' : 'Your turn');
+                        $('#trashTalk').text('"' + getBotCommentary() + '"');
+                    }
+                };
+            }
+
+            function onDrop(source, target) {
+                var move = game.move({ from: source, to: target, promotion: 'q' });
+                if (move === null) return 'snapback';
+                if (game.in_checkmate()) {
+                    $('#trashTalk').text('"' + getBotCommentary() + '"');
+                    return;
+                }
+                $('#status').text('Koopa is calculating (wo tou tong)...');
+                setTimeout(() => {
+                    if (engine) {
+                        engine.postMessage('position fen ' + game.fen());
+                        engine.postMessage('go depth 10');
+                    }
+                }, 100);
+            }
+
+            board = Chessboard('board', {
+                draggable: true,
+                position: 'start',
+                onDrop: onDrop,
+                pieceTheme: 'https://chessboardjs.com/img/chesspieces/wikipedia/{piece}.png'
+            });
+            $(window).resize(board.resize);
+            $('#resetBtn').on('click', () => {
+                game.reset(); board.start(); 
+                $('#trashTalk').text('"He he he! King Koopa Troopa is back!"');
+            });
+        });
+    </script>
+</body>
+</html>
