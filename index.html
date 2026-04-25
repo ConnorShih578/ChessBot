@@ -57,15 +57,27 @@
 
             function getBotCommentary() {
                 const history = game.history().join(' ');
+                
+                // 1. Checkmate/Game Over check
+                if (game.in_checkmate()) {
+                    return game.turn() === 'w' ? 
+                        "Checkmate. As expected. I'll go back to playing Grandmasters now." : 
+                        "Checkmate? Impossible. This script must have a bug. The real Timmy never loses.";
+                }
+
+                // 2. Opening Book
                 if (openingBook[history]) return openingBook[history];
+                
+                // 3. Check
                 if (game.in_check()) return situationalTalk.check[Math.floor(Math.random() * situationalTalk.check.length)];
                 
-                // FIXED LOGIC: Timmy is Black. 
-                // Stockfish score is relative to side-to-move. 
-                // We normalize it: Negative = Black (Timmy) is winning.
-                if (currentEval <= -1.2) return situationalTalk.botWinning[Math.floor(Math.random() * situationalTalk.botWinning.length)];
-                if (currentEval >= 1.2) return situationalTalk.playerWinning[Math.floor(Math.random() * situationalTalk.playerWinning.length)];
+                // 4. FIXED EVAL LOGIC:
+                // When currentEval is POSITIVE, the Bot (Black) is winning.
+                // When currentEval is NEGATIVE, the Player (White) is winning.
+                if (currentEval > 1.2) return situationalTalk.botWinning[Math.floor(Math.random() * situationalTalk.botWinning.length)];
+                if (currentEval < -1.2) return situationalTalk.playerWinning[Math.floor(Math.random() * situationalTalk.playerWinning.length)];
                 
+                // 5. General Talk
                 return situationalTalk.general[Math.floor(Math.random() * situationalTalk.general.length)];
             }
 
