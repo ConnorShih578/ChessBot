@@ -41,6 +41,23 @@
             var currentEval = 0.0;
             var lastEval = 0.0;
 
+            // THEORY DICTIONARY (Forces Koopa to play his favorite lines)
+            const theoryMoves = {
+                // ENGLUND GAMBIT (If white plays d4)
+                "d4": { move: "e5", talk: "Englund Gambit! Prepare to be confused! He he he!" },
+                "d4 e5 dxe5": { move: "Nc6", talk: "Developing the Troopa pony. He he he!" },
+                "d4 e5 dxe5 Nc6 Nf3": { move: "Qe7", talk: "Queen out early? Napoleon would call this 'The Bold Move.' He he he!" },
+                "d4 e5 dxe5 Nc6 Nf3 Qe7 Bf4": { move: "Qb4+", talk: "Check! Whatcha gonna do about it? Cwy?? He he he!" },
+                
+                // SICILIAN DEFENSE (If white plays e4)
+                "e4": { move: "c5", talk: "Sicilian! I like this. It’s mischievous, just like me. He he he!" },
+                "e4 c5 Nf3": { move: "d6", talk: "Setting up the Draco constellation! Wo tou tong, it's so pretty." },
+                "e4 c5 Nf3 d6 d4": { move: "cxd4", talk: "I'll take that! One step closer to being King of the Board. He he he!" },
+                
+                // KINGS PAWN KNIGHT (As White)
+                "e4 e5": { move: "Nf3", talk: "King's Pawn Knight! Classic, like a fine Napoleon pastry. He he he!" }
+            };
+
             const randomFacts = [
                 "all hail King Koopa Troopa!",
                 "Did you know Napoleon Bonaparte was actually 5'6\", which was average height for the time?",
@@ -56,24 +73,15 @@
                         "He he he! King Koopa Troopa wins! All hail the King!" : 
                         "我头痛！ This board is rigged. Napoleon wouldn't have played like this.";
                 }
-
                 if (game.in_check()) return "Check, whatcha gonna do about it? Cwy??";
-
-                // Blunder Detection (If player made a mistake)
                 if ((currentEval - lastEval) > 1.5) return "He he he he he, I see You just blundered!";
-
-                // Eval-based logic
                 if (currentEval < -2.5) return "我头痛！";
                 if (currentEval < -0.8) return "You think you're winning?? You're not!";
-                
-                // If engine makes a "bad" move, it's a "sacrifice"
                 if ((lastEval - currentEval) > 1.2) return "That was a sacrifice by the way.";
-
                 if (currentEval > 1.5) {
                     const winLines = ["He he he, you're losing. Resign to King Koopa Troopa!!", "Ha ha, Im winning"];
                     return winLines[Math.floor(Math.random() * winLines.length)];
                 }
-                
                 return randomFacts[Math.floor(Math.random() * randomFacts.length)];
             }
 
@@ -107,27 +115,17 @@
                 var move = game.move({ from: source, to: target, promotion: 'q' });
                 if (move === null) return 'snapback';
 
-                const history = game.history();
+                const historyString = game.history().join(' ');
 
-                // FORCE OPENINGS FOR BLACK
-                // Force Englund Gambit (1. d4 e5)
-                if (history.length === 1 && history[0] === 'd4') {
+                // CHECK FOR THEORY MOVES FIRST
+                if (theoryMoves[historyString]) {
+                    const tMove = theoryMoves[historyString];
                     setTimeout(() => {
-                        game.move('e5');
+                        game.move(tMove.move);
                         board.position(game.fen());
-                        $('#trashTalk').text('"Englund Gambit! Prepare to be confused! He he he!"');
+                        $('#trashTalk').text('"' + tMove.talk + '"');
                         $('#status').text('Your turn');
-                    }, 500);
-                    return;
-                }
-                // Force Sicilian (1. e4 c5)
-                if (history.length === 1 && history[0] === 'e4') {
-                    setTimeout(() => {
-                        game.move('c5');
-                        board.position(game.fen());
-                        $('#trashTalk').text('"Sicilian! I like this. It’s mischievous, just like me. He he he!"');
-                        $('#status').text('Your turn');
-                    }, 500);
+                    }, 600);
                     return;
                 }
 
@@ -155,8 +153,7 @@
             $(window).resize(board.resize);
             
             $('#resetBtn').on('click', () => {
-                game.reset(); 
-                board.start(); 
+                game.reset(); board.start(); 
                 $('#trashTalk').text('"He he he! King Koopa Troopa is back!"');
                 $('#status').text('Ready! Your turn.');
             });
