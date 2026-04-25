@@ -56,15 +56,20 @@
                 general: ["I'm basically a Grandmaster in real life. This bot is just my public demo.", "I have 3000 Elo on my main account. This is just my 'messing around' bot.", "Are you going to do something? This game's getting boring."]
             };
 
+            /* Replace your existing getBotCommentary function with this */
             function getBotCommentary() {
                 const history = game.history().join(' ');
                 if (openingBook[history]) return openingBook[history];
                 if (game.in_check()) return situationalTalk.check[Math.floor(Math.random() * situationalTalk.check.length)];
-                if (currentEval < -2.0) return situationalTalk.botWinning[Math.floor(Math.random() * situationalTalk.botWinning.length)];
-                if (currentEval > 2.0) return situationalTalk.playerWinning[Math.floor(Math.random() * situationalTalk.playerWinning.length)];
+                
+                // Evaluation Logic: 
+                // Positive (+) = White (Player) winning
+                // Negative (-) = Black (Bot/Timmy) winning
+                if (currentEval < -1.5) return situationalTalk.botWinning[Math.floor(Math.random() * situationalTalk.botWinning.length)];
+                if (currentEval > 1.5) return situationalTalk.playerWinning[Math.floor(Math.random() * situationalTalk.playerWinning.length)];
+                
                 return situationalTalk.general[Math.floor(Math.random() * situationalTalk.general.length)];
             }
-
             try {
                 engine = new Worker('./stockfish-18-lite-single.js');
                 engine.postMessage('uci');
