@@ -78,4 +78,89 @@
             }
 
             try {
-                engine = new Worker('./stockfish-18
+                engine = new Worker('./stockfish-18-lite-single.js');
+                engine.postMessage('uci');
+                engine.postMessage('setoption name Skill Level value 8'); 
+            } catch (e) {
+                $('#status').text('Engine Error.');
+            }
+
+            if (engine) {
+                engine.onmessage = function(e) {
+                    const line = e.data;
+                    if (line.includes('score cp')) {
+                        const parts = line.split(' ');
+                        lastEval = currentEval;
+                        currentEval = parseInt(parts[parts.indexOf('cp') + 1]) / 100;
+                    }
+                    if (line.startsWith('bestmove')) {
+                        const m = line.split(' ')[1];
+                        game.move({ from: m.substring(0, 2), to: m.substring(2, 4), promotion: 'q' });
+                        board.position(game.fen());
+                        $('#status').text(game.in_checkmate() ? 'GAME OVER' : 'Your turn');
+                        $('#trashTalk').text('"' + getBotCommentary() + '"');
+                    }
+                };
+            }
+
+            function onDrop(source, target) {
+                var move = game.move({ from: source, to: target, promotion: 'q' });
+                if (move === null) return 'snapback';
+
+                const history = game.history();
+
+                // FORCE OPENINGS FOR BLACK
+                // Force Englund Gambit (1. d4 e5)
+                if (history.length === 1 && history[0] === 'd4') {
+                    setTimeout(() => {
+                        game.move('e5');
+                        board.position(game.fen());
+                        $('#trashTalk').text('"Englund Gambit! Prepare to be confused! He he he!"');
+                        $('#status').text('Your turn');
+                    }, 500);
+                    return;
+                }
+                // Force Sicilian (1. e4 c5)
+                if (history.length === 1 && history[0] === 'e4') {
+                    setTimeout(() => {
+                        game.move('c5');
+                        board.position(game.fen());
+                        $('#trashTalk').text('"Sicilian! I like this. It’s mischievous, just like me. He he he!"');
+                        $('#status').text('Your turn');
+                    }, 500);
+                    return;
+                }
+
+                if (game.in_checkmate()) {
+                    $('#trashTalk').text('"' + getBotCommentary() + '"');
+                    return;
+                }
+
+                $('#status').text('Koopa is calculating (wo tou tong)...');
+                setTimeout(() => {
+                    if (engine) {
+                        engine.postMessage('position fen ' + game.fen());
+                        engine.postMessage('go depth 10');
+                    }
+                }, 100);
+            }
+
+            board = Chessboard('board', {
+                draggable: true,
+                position: 'start',
+                onDrop: onDrop,
+                pieceTheme: 'https://chessboardjs.com/img/chesspieces/wikipedia/{piece}.png'
+            });
+
+            $(window).resize(board.resize);
+            
+            $('#resetBtn').on('click', () => {
+                game.reset(); 
+                board.start(); 
+                $('#trashTalk').text('"He he he! King Koopa Troopa is back!"');
+                $('#status').text('Ready! Your turn.');
+            });
+        });
+    </script>
+</body>
+</html>
