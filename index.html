@@ -85,7 +85,8 @@
 
             board = Chessboard('board', {
                 position: 'start',
-                draggable: false
+                draggable: false,
+                pieceTheme: 'https://chessboardjs.com/img/chesspieces/wikipedia/{piece}.png'
             });
 
             $('#board').on('click', '.square-55d63', function() {
