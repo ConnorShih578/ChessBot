@@ -113,7 +113,8 @@
                 // Run Engine
                 $('#status').text('Koopa is thinking...');
                 engine.postMessage('position fen ' + game.fen());
-                engine.postMessage('go depth 10');
+                engine.postMessage('setoption name Skill Level value 4'); //Skill level
+                engine.postMessage('go depth 6'); //Search depth
             }
 
             // Initialize Board
