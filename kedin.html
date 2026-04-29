@@ -6,17 +6,15 @@
     <link rel="stylesheet" href="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.css">
     <style>
         body { font-family: 'Comic Sans MS', cursive, sans-serif; display: flex; flex-direction: column; align-items: center; background: #e8f5e9; color: #2e7d32; padding-top: 20px; }
-        #board { width: 400px; max-width: 90vw; border: 4px solid #4caf50; border-radius: 8px; }
-        #trashTalk { background: #2e7d32; color: white; padding: 15px; border-radius: 15px; margin-bottom: 15px; width: 380px; min-height: 40px; text-align: center; border: 3px solid #81c784; }
-        .highlight-sq { box-shadow: inset 0 0 3px 3px #ccff90; }
+        #board { width: 400px; border: 4px solid #4caf50; border-radius: 8px; }
+        #trashTalk { background: #2e7d32; color: white; padding: 15px; border-radius: 15px; margin-bottom: 15px; width: 380px; text-align: center; border: 3px solid #81c784; min-height: 40px; }
         .highlight-last { background-color: rgba(129, 199, 132, 0.6) !important; }
-        .cheat-text { color: #d32f2f; font-weight: bold; font-size: 1.2em; display: none; margin-top: 10px; }
-        button { padding: 10px 20px; background: #4caf50; color: white; border: none; border-radius: 20px; cursor: pointer; font-weight: bold; box-shadow: 0 4px #1b5e20; }
-        button:active { transform: translateY(2px); box-shadow: 0 2px #1b5e20; }
+        .cheat-text { color: #d32f2f; font-weight: bold; display: none; margin-top: 10px; }
+        button { padding: 10px 20px; background: #4caf50; color: white; border: none; border-radius: 20px; font-weight: bold; }
     </style>
 </head>
 <body>
-    <div id="trashTalk">"Ribbit! Let's play a game."</div>
+    <div id="trashTalk">"Ribbit! Let's have a sensible game."</div>
     <div id="board"></div>
     <div id="officialResult" class="cheat-text">OFFICIAL RESULT: YOU WON! (Fwog Cheated)</div>
     <div style="margin-top:20px;">
@@ -27,19 +25,11 @@
     <script src="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>
     <script>
-        var board = null;
-        var game = new Chess();
+        var board = null, game = new Chess(), sourceSquare = null, currentEval = 0.0;
         var engine = new Worker('./stockfish-18-lite-single.js');
-        var sourceSquare = null;
 
         engine.postMessage('uci');
-        engine.postMessage('setoption name Skill Level value 0'); // 800 Elo Target
-
-        function highlight(from, to) {
-            $('.square-55d63').removeClass('highlight-last');
-            $('.square-' + from).addClass('highlight-last');
-            $('.square-' + to).addClass('highlight-last');
-        }
+        engine.postMessage('setoption name Skill Level value 0');
 
         function onSquareClick(square) {
             if (game.game_over()) return;
@@ -54,10 +44,10 @@
                 $('.square-55d63').removeClass('highlight-sq');
                 if (move) {
                     board.position(game.fen());
-                    highlight(move.from, move.to);
+                    $('.square-55d63').removeClass('highlight-last');
+                    $('.square-'+move.from+', .square-'+move.to).addClass('highlight-last');
                     if (game.in_checkmate()) { triggerCheat(); return; }
-                    
-                    $('#trashTalk').text('"A sensible move. My turn..."');
+                    $('#trashTalk').text('"Focusing on the pond... my turn."');
                     engine.postMessage('position fen ' + game.fen());
                     engine.postMessage('go depth 8');
                 }
@@ -66,19 +56,22 @@
         }
 
         engine.onmessage = function(e) {
+            if (e.data.includes('score cp')) {
+                currentEval = parseInt(e.data.split('cp ')[1].split(' ')[0]) / 100;
+            }
             if (e.data.startsWith('bestmove')) {
-                var moveStr = e.data.split(' ')[1];
-                var from = moveStr.substring(0, 2);
-                var to = moveStr.substring(2, 4);
-                game.move({ from: from, to: to, promotion: 'q' });
+                var m = e.data.split(' ')[1];
+                game.move({ from: m.substring(0, 2), to: m.substring(2, 4), promotion: 'q' });
                 board.position(game.fen());
-                highlight(from, to);
-
-                var eval = 0; // Simple placeholder logic for mood
-                if (game.in_checkmate()) {
-                    $('#trashTalk').text('"RIBBIT! Checkmate! Red Toad could never!"');
+                $('.square-55d63').removeClass('highlight-last');
+                $('.square-'+m.substring(0, 2)+', .square-'+m.substring(2, 4)).addClass('highlight-last');
+                
+                if (currentEval > 3.0) {
+                    $('#trashTalk').text('"RIBBIT! I\'M HOPPING TO VICTORY! TAKE THAT RED TOAD!"');
+                } else if (currentEval < -3.0) {
+                    $('#trashTalk').text('"Whatever... Red Toad probably sabotaged my lilypad."');
                 } else {
-                    $('#trashTalk').text('"I\'m hopping toward victory!"');
+                    $('#trashTalk').text('"A very sensible position. Ribbit."');
                 }
             }
         };
@@ -86,15 +79,14 @@
         function triggerCheat() {
             $('#trashTalk').text('"I THINK NOT!"');
             setTimeout(() => {
-                var kingPos = "";
-                game.board().forEach(row => row.forEach(sq => { if(sq && sq.type==='k' && sq.color==='w') kingPos = sq.square; }));
-                var pieces = ['a1','h1','c1'];
-                board.move('h8-' + kingPos); // Illegal teleport
+                let kp = "";
+                game.board().forEach(r => r.forEach(s => { if(s && s.type==='k' && s.color==='w') kp = s.square; }));
+                board.move('h8-' + kp); 
                 $('#officialResult').show();
             }, 1000);
         }
 
-        board = Chessboard('board', { position: 'start', pieceTheme: 'https://chessboardjs.com/img/chesspieces/wikipedia/{piece}.png' });
+        board = Chessboard('board', { position: 'start', draggable: false });
         $('#board').on('click', '.square-55d63', function() { onSquareClick($(this).attr('data-square')); });
     </script>
 </body>
