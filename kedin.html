@@ -58,7 +58,11 @@
                     board.position(game.fen());
                     $('.square-55d63').removeClass('highlight-last');
                     $('.square-'+move.from+', .square-'+move.to).addClass('highlight-last');
-                    if (game.in_checkmate()) { triggerCheat(); return; }
+                    if (game.in_checkmate()) {
+                    // Small delay so you can actually see the checkmate happen first
+                    setTimeout(triggerCheat, 1000); 
+                    return; 
+                    }
                     engine.postMessage('position fen ' + game.fen());
                     engine.postMessage('go depth 8');
                     $('#trashTalk').text('"Ribbit... thinking..."');
@@ -79,13 +83,33 @@
             }
         };
 
-        function triggerCheat() {
-            $('#trashTalk').text('"I THINK NOT!"');
+       function triggerCheat() {
+            // Get the piece you just used to checkmate him
+            const history = game.history({ verbose: true });
+            const lastMove = history[history.length - 1];
+
+            $('#trashTalk').text('"I THINK NOT! THAT PIECE IS UNSENSIBLE!"');
+            
             setTimeout(() => {
-                let kingPos = "";
-                game.board().forEach(row => row.forEach(s => { if(s && s.type==='k' && s.color==='w') kingPos = s.square; }));
-                board.move('h8-' + kingPos); $('#officialResult').show();
-            }, 800);
+                // DELETE the piece from the internal game logic
+                game.remove(lastMove.to); 
+                
+                // RE-LOAD the game state to "unlock" the checkmate status
+                // This is the magic step that lets the game continue!
+                game.load(game.fen()); 
+
+                // Update the visual board so the piece vanishes
+                board.position(game.fen());
+                
+                // Force the frog to take a turn immediately
+                $('#trashTalk').text('"There. Much better. My turn! Ribbit!"');
+                $('#officialResult').show(); // Show the cheat message
+                
+                engine.postMessage('position fen ' + game.fen());
+                engine.postMessage('go depth 8');
+                
+                sourceSquare = null; 
+            }, 1000);
         }
 
         $('#undoBtn').on('click', function() {
