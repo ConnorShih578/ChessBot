@@ -2,36 +2,25 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Chess vs Koopa Troopa</title>
     <link rel="stylesheet" href="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.css">
     <style>
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; display: flex; flex-direction: column; align-items: center; background: #fffde7; padding-top: 20px; color: #333; }
+        body { font-family: 'Segoe UI', Tahoma, sans-serif; display: flex; flex-direction: column; align-items: center; background: #fffde7; padding-top: 20px; color: #333; }
         #board { width: 400px; max-width: 95vw; border: 5px solid #fbc02d; border-radius: 4px; box-shadow: 0 8px 25px rgba(0,0,0,0.15); }
-        #trashTalk { font-style: italic; background: white; padding: 15px; border-radius: 12px; border: 3px solid #fbc02d; margin-bottom: 15px; min-height: 24px; width: 380px; text-align: center; font-weight: 500; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+        #trashTalk { font-style: italic; background: white; padding: 15px; border-radius: 12px; border: 3px solid #fbc02d; margin-bottom: 15px; width: 380px; text-align: center; font-weight: 500; }
         .highlight-sq { box-shadow: inset 0 0 3px 3px #ffee58; }
         .highlight-last { background-color: rgba(251, 192, 45, 0.4) !important; }
-        .nav-links { margin-bottom: 20px; display: flex; gap: 20px; }
-        .nav-link { text-decoration: none; color: #f57f17; font-weight: bold; font-size: 0.9em; border-bottom: 2px solid transparent; transition: 0.2s; }
-        .nav-link:hover { border-bottom: 2px solid #f57f17; }
-        .controls { margin-top: 25px; display: flex; gap: 10px; }
-        button { padding: 12px 24px; cursor: pointer; background: #fbc02d; border: none; border-radius: 6px; font-weight: bold; color: #5f4b00; transition: transform 0.1s, background 0.2s; }
-        button:hover { background: #fdd835; }
-        button:active { transform: scale(0.95); }
+        .nav-link { text-decoration: none; color: #f57f17; font-weight: bold; margin-bottom: 10px; }
+        .controls { margin-top: 20px; }
+        button { padding: 10px 20px; cursor: pointer; background: #fbc02d; border: none; border-radius: 6px; font-weight: bold; margin: 5px; }
         #eval-bar { font-size: 0.8em; color: #999; margin-top: 5px; }
     </style>
 </head>
 <body>
-
-    <div class="nav-links">
-        <a href="kedin.html" class="nav-link">← Challenge Gween Fwog</a>
-        <a href="index.html" class="nav-link">Face Martina →</a>
-    </div>
-
+    <a href="kedin.html" class="nav-link">← Challenge Gween Fwog</a>
     <div id="trashTalk">"He he he! King Koopa Troopa is in the building!"</div>
     <div id="board"></div>
     <div id="eval-bar">Evaluation: 0.0</div>
-
     <div class="controls">
         <button id="undoBtn">Undo Move</button>
         <button onclick="location.reload()">Reset Board</button>
@@ -41,70 +30,16 @@
     <script src="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>
     <script>
-        var board = null;
-        var game = new Chess();
-        var engine = new Worker('./stockfish-18-lite-single.js');
-        var sourceSquare = null;
-        var currentEval = 0.0;
-        var lastEval = 0.0;
+        var board = null, game = new Chess(), engine = new Worker('./stockfish-18-lite-single.js'), sourceSquare = null, currentEval = 0.0;
 
-        // Opening Repertoire: Englund Gambit & Sicilian
         const repertoire = {
             "d4": { move: "e5", talk: "Englund Gambit! Prepare to be confused! He he he!" },
-            "d4 e5 dxe5": { move: "Nc6", talk: "Developing the Troopa pony. He he he!" },
-            "d4 e5 dxe5 Nc6 Nf3": { move: "Qe7", talk: "Triple attacking the pawn! He he he!" },
             "e4": { move: "c5", talk: "Sicilian! I like this. It’s mischievous. He he he!" }
         };
-
-        const randomFacts = [
-            "All hail King Koopa Troopa!",
-            "Did you know Napoleon Bonaparte was actually 5'6\"?",
-            "Napoleon was once attacked by a colony of rabbits. He he he!",
-            "My logic is as sound as the Napoleonic Code.",
-            "I'm not just a shell, I'm a mastermind! He he he!",
-            "Are you even trying? 我头痛！"
-        ];
-
-        function updateStatus(message) {
-            $('#trashTalk').text('"' + message + '"');
-        }
-
-        function getCommentary() {
-            if (game.in_checkmate()) return game.turn() === 'w' ? "He he he! King Koopa Troopa wins!" : "我头痛！ This board is rigged.";
-            if (game.in_draw()) return "A draw? I'll allow it. For now.";
-            if (game.in_check()) return "Check! Whatcha gonna do about it? Cwy??";
-            
-            let diff = currentEval - lastEval;
-            if (diff > 1.8) return "He he he he he, I see you just blundered!";
-            if (currentEval < -2.5) return "我头痛！ Why am I losing??";
-            
-            return randomFacts[Math.floor(Math.random() * randomFacts.length)];
-        }
-
-        function highlight(from, to) {
-            $('.square-55d63').removeClass('highlight-last');
-            $('.square-' + from + ', .square-' + to).addClass('highlight-last');
-        }
-
-        function makeEngineMove() {
-            const history = game.history().join(' ');
-            if (repertoire[history]) {
-                setTimeout(() => {
-                    let move = game.move(repertoire[history].move);
-                    board.position(game.fen());
-                    highlight(move.from, move.to);
-                    updateStatus(repertoire[history].talk);
-                }, 500);
-            } else {
-                engine.postMessage('position fen ' + game.fen());
-                engine.postMessage('go depth 8'); // Single-thread depth
-            }
-        }
 
         function onSquareClick() {
             var square = $(this).attr('data-square');
             if (game.game_over()) return;
-
             if (sourceSquare === null) {
                 var piece = game.get(square);
                 if (piece && piece.color === game.turn()) {
@@ -117,8 +52,20 @@
                 $('.square-55d63').removeClass('highlight-sq');
                 if (move) {
                     board.position(game.fen());
-                    highlight(move.from, move.to);
-                    makeEngineMove();
+                    $('.square-55d63').removeClass('highlight-last');
+                    $('.square-'+move.from+', .square-'+move.to).addClass('highlight-last');
+                    
+                    const history = game.history().join(' ');
+                    if (repertoire[history]) {
+                        setTimeout(() => {
+                            let m = game.move(repertoire[history].move);
+                            board.position(game.fen());
+                            $('#trashTalk').text('"' + repertoire[history].talk + '"');
+                        }, 500);
+                    } else {
+                        engine.postMessage('position fen ' + game.fen());
+                        engine.postMessage('go depth 8');
+                    }
                 }
                 sourceSquare = null;
             }
@@ -126,34 +73,30 @@
 
         engine.onmessage = function(e) {
             if (e.data.includes('score cp')) {
-                lastEval = currentEval;
                 let score = parseInt(e.data.split('cp ')[1].split(' ')[0]);
                 currentEval = (game.turn() === 'b' ? score : -score) / 100;
                 $('#eval-bar').text('Evaluation: ' + currentEval.toFixed(1));
             }
             if (e.data.startsWith('bestmove')) {
                 var m = e.data.split(' ')[1];
-                var move = game.move({ from: m.substring(0, 2), to: m.substring(2, 4), promotion: 'q' });
+                game.move({ from: m.substring(0, 2), to: m.substring(2, 4), promotion: 'q' });
                 board.position(game.fen());
-                highlight(move.from, move.to);
-                updateStatus(getCommentary());
+                $('#trashTalk').text(currentEval < -2.0 ? '"我头痛！ Why am I losing??"' : '"He he he! My turn!"');
             }
         };
 
         $('#undoBtn').on('click', function() {
-            game.undo(); game.undo();
-            board.position(game.fen());
-            $('.square-55d63').removeClass('highlight-last');
-            updateStatus("Wait, you're taking it back? 我头痛！");
+            game.undo(); game.undo(); board.position(game.fen());
+            $('#trashTalk').text('"Wait, you\'re taking it back? 我头痛！"');
         });
 
-        board = Chessboard('board', {
-            position: 'start',
-            draggable: false,
-            pieceTheme: 'https://chessboardjs.com/img/chesspieces/wikipedia/{piece}.png'
+        $(document).ready(function() {
+            board = Chessboard('board', {
+                position: 'start', draggable: false,
+                pieceTheme: 'https://chessboardjs.com/img/chesspieces/wikipedia/{piece}.png'
+            });
+            $(document).on('click', '.square-55d63', onSquareClick);
         });
-
-        $(document).on('click', '.square-55d63', onSquareClick);
     </script>
 </body>
 </html>
