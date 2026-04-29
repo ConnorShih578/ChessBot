@@ -13,30 +13,29 @@
         .nav-links { margin-bottom: 15px; }
         .nav-link { text-decoration: none; color: #1b5e20; font-weight: bold; }
         .cheat-text { color: #d32f2f; font-weight: bold; display: none; margin-top: 15px; background: white; padding: 5px 15px; border-radius: 10px; border: 2px solid #d32f2f; }
-        button { margin-top: 20px; padding: 10px 25px; background: #4caf50; color: white; border: none; border-radius: 25px; font-weight: bold; cursor: pointer; }
+        button { margin: 10px; padding: 10px 25px; background: #4caf50; color: white; border: none; border-radius: 25px; font-weight: bold; cursor: pointer; }
     </style>
 </head>
 <body>
 
     <div class="nav-links">
-        <a href="index.html" class="nav-link">Challenge Martina →</a>
+        <a href="Martina.html" class="nav-link">Challenge Martina →</a>
     </div>
 
     <div id="trashTalk">"Ribbit! Let's have a sensible game."</div>
     <div id="board"></div>
     <div id="officialResult" class="cheat-text">OFFICIAL RESULT: YOU WON! (Fwog Cheated)</div>
 
-    <button onclick="location.reload()">New Game</button>
+    <div>
+        <button id="undoBtn">Undo Move</button>
+        <button onclick="location.reload()">New Game</button>
+    </div>
 
     <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
     <script src="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>
     <script>
-        var board = null;
-        var game = new Chess();
-        var engine = new Worker('./stockfish-18-lite-single.js');
-        var sourceSquare = null;
-        var currentEval = 0.0;
+        var board = null, game = new Chess(), engine = new Worker('./stockfish-18-lite-single.js'), sourceSquare = null, currentEval = 0.0;
 
         engine.postMessage('uci');
         engine.postMessage('setoption name Skill Level value 0'); 
@@ -45,7 +44,6 @@
         function onSquareClick() {
             var square = $(this).attr('data-square');
             if (game.game_over()) return;
-
             if (sourceSquare === null) {
                 var piece = game.get(square);
                 if (piece && piece.color === 'w') {
@@ -60,12 +58,7 @@
                     board.position(game.fen());
                     $('.square-55d63').removeClass('highlight-last');
                     $('.square-'+move.from+', .square-'+move.to).addClass('highlight-last');
-                    
-                    if (game.in_checkmate()) { 
-                        triggerCheat(); 
-                        return; 
-                    }
-
+                    if (game.in_checkmate()) { triggerCheat(); return; }
                     engine.postMessage('position fen ' + game.fen());
                     engine.postMessage('go depth 8');
                     $('#trashTalk').text('"Ribbit... thinking..."');
@@ -75,23 +68,14 @@
         }
 
         engine.onmessage = function(e) {
-            if (e.data.includes('score cp')) {
-                currentEval = parseInt(e.data.split('cp ')[1].split(' ')[0]) / 100;
-            }
+            if (e.data.includes('score cp')) currentEval = parseInt(e.data.split('cp ')[1].split(' ')[0]) / 100;
             if (e.data.startsWith('bestmove')) {
                 var m = e.data.split(' ')[1];
                 game.move({ from: m.substring(0, 2), to: m.substring(2, 4), promotion: 'q' });
                 board.position(game.fen());
                 $('.square-55d63').removeClass('highlight-last');
                 $('.square-'+m.substring(0, 2)+', .square-'+m.substring(2, 4)).addClass('highlight-last');
-                
-                if (currentEval > 2.0) {
-                    $('#trashTalk').text('"RIBBIT! I\'M HOPPING TO VICTORY! TAKE THAT RED TOAD!"');
-                } else if (currentEval < -2.0) {
-                    $('#trashTalk').text('"Red Toad probably sabotaged this lilypad. Unfair."');
-                } else {
-                    $('#trashTalk').text('"A very sensible position. Ribbit."');
-                }
+                $('#trashTalk').text(currentEval > 2.0 ? '"RIBBIT! I\'M HOPPING TO VICTORY!"' : '"A very sensible position. Ribbit."');
             }
         };
 
@@ -99,21 +83,24 @@
             $('#trashTalk').text('"I THINK NOT!"');
             setTimeout(() => {
                 let kingPos = "";
-                game.board().forEach(row => row.forEach(s => { 
-                    if(s && s.type==='k' && s.color==='w') kingPos = s.square; 
-                }));
-                board.move('h8-' + kingPos); 
-                $('#officialResult').show();
+                game.board().forEach(row => row.forEach(s => { if(s && s.type==='k' && s.color==='w') kingPos = s.square; }));
+                board.move('h8-' + kingPos); $('#officialResult').show();
             }, 800);
         }
 
-        board = Chessboard('board', {
-            position: 'start',
-            draggable: false,
-            pieceTheme: 'https://chessboardjs.com/img/chesspieces/wikipedia/{piece}.png'
+        $('#undoBtn').on('click', function() {
+            game.undo(); game.undo(); board.position(game.fen());
+            $('.square-55d63').removeClass('highlight-last');
+            $('#trashTalk').text('"Ribbit! A do-over?"');
         });
 
-        $(document).on('click', '.square-55d63', onSquareClick);
+        $(document).ready(function() {
+            board = Chessboard('board', {
+                position: 'start', draggable: false,
+                pieceTheme: 'https://chessboardjs.com/img/chesspieces/wikipedia/{piece}.png'
+            });
+            $(document).on('click', '.square-55d63', onSquareClick);
+        });
     </script>
 </body>
 </html>
