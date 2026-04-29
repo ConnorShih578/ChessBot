@@ -5,78 +5,100 @@
     <title>Chess vs Martina</title>
     <link rel="stylesheet" href="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.css">
     <style>
-        body { font-family: sans-serif; display: flex; flex-direction: column; align-items: center; background: #1a0a1a; color: #fce4ec; padding-top: 20px; }
-        #board { width: 400px; border: 4px solid #ad1457; }
-        #trashTalk { background: #4a148c; padding: 12px; border-radius: 8px; border: 1px solid #ad1457; margin-bottom: 15px; width: 380px; text-align: center; }
+        body { font-family: 'Segoe UI', sans-serif; display: flex; flex-direction: column; align-items: center; background: #1a0a1a; color: #fce4ec; padding-top: 20px; }
+        #board { width: 400px; max-width: 95vw; border: 4px solid #ad1457; box-shadow: 0 0 20px rgba(173, 20, 87, 0.3); }
+        #trashTalk { background: #4a148c; padding: 15px; border-radius: 8px; border: 1px solid #ad1457; margin-bottom: 15px; width: 380px; text-align: center; min-height: 24px; font-weight: 300; letter-spacing: 0.5px; }
+        .highlight-sq { box-shadow: inset 0 0 3px 3px #f48fb1; }
         .highlight-last { background-color: rgba(173, 20, 87, 0.5) !important; }
-        .nav-link { margin-bottom: 15px; text-decoration: none; color: #f48fb1; font-weight: bold; }
-        button { padding: 10px 20px; background: #ad1457; color: white; border: none; border-radius: 4px; font-weight: bold; }
+        .nav-links { margin-bottom: 20px; }
+        .nav-link { text-decoration: none; color: #f48fb1; font-weight: bold; font-size: 0.9em; }
+        button { margin-top: 25px; padding: 12px 24px; background: #ad1457; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; }
+        button:hover { background: #d81b60; }
     </style>
 </head>
 <body>
-    <a href="cooper.html" class="nav-link">← Switch to Koopa Troopa</a>
+
+    <div class="nav-links">
+        <a href="cooper.html" class="nav-link">← Go Against Koopa Troopa</a>
+    </div>
+
     <div id="trashTalk">"Junior told me you were a challenge. Junior was wrong."</div>
     <div id="board"></div>
-    <div style="margin-top:20px;">
-        <button onclick="location.reload()">New Game</button>
-    </div>
+
+    <button onclick="location.reload()">Reset Position</button>
 
     <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
     <script src="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>
     <script>
-        var board = null, game = new Chess(), sourceSquare = null;
+        var board = null;
+        var game = new Chess();
         var engine = new Worker('./stockfish-18-lite-single.js');
+        var sourceSquare = null;
 
         const martinaLines = [
             "I don't play for fun. I play for the handshake at the end.",
             "You're already lost. It just takes you 15 more moves to realize it.",
             "Calculating your inevitable resignation...",
-            "That move? Deeply suboptimal."
+            "That move? Deeply suboptimal.",
+            "Predictable. Efficient. Final."
         ];
 
         engine.postMessage('uci');
         engine.postMessage('setoption name Threads value 1');
+        engine.postMessage('setoption name Hash value 16');
 
-        function onSquareClick(square) {
+        function highlight(from, to) {
+            $('.square-55d63').removeClass('highlight-last');
+            $('.square-' + from + ', .square-' + to).addClass('highlight-last');
+        }
+
+        function onSquareClick() {
+            var square = $(this).attr('data-square');
+            if (game.game_over()) return;
+
             if (sourceSquare === null) {
-                const piece = game.get(square);
+                var piece = game.get(square);
                 if (piece && piece.color === game.turn()) {
                     sourceSquare = square;
                     $('.square-55d63').removeClass('highlight-sq');
                     $('.square-' + square).addClass('highlight-sq');
                 }
-                return;
+            } else {
+                var move = game.move({ from: sourceSquare, to: square, promotion: 'q' });
+                $('.square-55d63').removeClass('highlight-sq');
+                if (move) {
+                    board.position(game.fen());
+                    highlight(move.from, move.to);
+                    engine.postMessage('position fen ' + game.fen());
+                    engine.postMessage('go depth 20');
+                    $('#trashTalk').text('"Analyzing..."');
+                }
+                sourceSquare = null;
             }
-            var move = game.move({ from: sourceSquare, to: square, promotion: 'q' });
-            $('.square-55d63').removeClass('highlight-sq');
-            if (move) {
-                board.position(game.fen());
-                $('.square-55d63').removeClass('highlight-last');
-                $('.square-' + move.from + ', .square-' + move.to).addClass('highlight-last');
-                engine.postMessage('position fen ' + game.fen());
-                engine.postMessage('go depth 18');
-            }
-            sourceSquare = null;
         }
 
         engine.onmessage = function(e) {
             if (e.data.startsWith('bestmove')) {
                 var m = e.data.split(' ')[1];
-                game.move({ from: m.substring(0, 2), to: m.substring(2, 4), promotion: 'q' });
+                var move = game.move({ from: m.substring(0, 2), to: m.substring(2, 4), promotion: 'q' });
                 board.position(game.fen());
-                $('.square-55d63').removeClass('highlight-last');
-                $('.square-' + m.substring(0, 2) + ', .square-' + m.substring(2, 4)).addClass('highlight-last');
-                $('#trashTalk').text('"' + martinaLines[Math.floor(Math.random() * martinaLines.length)] + '"');
+                highlight(move.from, move.to);
+                if (game.in_checkmate()) {
+                    $('#trashTalk').text('"As expected. Goodbye."');
+                } else {
+                    $('#trashTalk').text('"' + martinaLines[Math.floor(Math.random() * martinaLines.length)] + '"');
+                }
             }
         };
 
-        board = Chessboard('board', { 
-            position: 'start', 
+        board = Chessboard('board', {
+            position: 'start',
             draggable: false,
-            pieceTheme: 'https://chessboardjs.com/img/chesspieces/wikipedia/{piece}.png' 
+            pieceTheme: 'https://chessboardjs.com/img/chesspieces/wikipedia/{piece}.png'
         });
-        $('#board').on('click', '.square-55d63', function() { onSquareClick($(this).attr('data-square')); });
+
+        $(document).on('click', '.square-55d63', onSquareClick);
     </script>
 </body>
 </html>
