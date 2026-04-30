@@ -39,8 +39,12 @@
     <script>
         var board = null, game = new Chess(), engine = new Worker('./stockfish-18-lite-single.js'), sourceSquare = null, currentEval = 0.0;
 
+        // --- NEW ENGINE CONFIGURATION ---
         engine.postMessage('uci');
-        engine.postMessage('setoption name Skill Level value 8'); // FIXED SKILL LEVEL
+        // 1. Enable strength limiting (overrides 'Skill Level')
+        engine.postMessage('setoption name UCI_LimitStrength value true');
+        // 2. Set target Elo (Start at 1350 for a 1200 human feel)
+        engine.postMessage('setoption name UCI_Elo value 1350');
         engine.postMessage('setoption name Threads value 1');
 
         const repertoire = {
@@ -88,7 +92,8 @@
                         }, 500);
                     } else {
                         engine.postMessage('position fen ' + game.fen());
-                        engine.postMessage('go depth 8');
+                        // 3. Remove 'depth' limits and use 'movetime' instead
+                        engine.postMessage('go movetime 1000'); 
                     }
                 }
                 sourceSquare = null;
