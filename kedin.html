@@ -15,7 +15,6 @@
         .cheat-text { color: #d32f2f; font-weight: bold; display: none; margin-top: 15px; background: white; padding: 5px 15px; border-radius: 10px; border: 2px solid #d32f2f; }
         button { margin: 10px; padding: 10px 25px; background: #4caf50; color: white; border: none; border-radius: 25px; font-weight: bold; cursor: pointer; }
         
-        /* Shake animation for Fwog victory */
         @keyframes shake {
             0% { transform: translate(1px, 1px) rotate(0deg); }
             10% { transform: translate(-1px, -2px) rotate(-1deg); }
@@ -53,11 +52,11 @@
     <script>
         var board = null, game = new Chess(), engine = new Worker('./stockfish-18-lite-single.js'), sourceSquare = null, currentEval = 0.0;
 
-        // --- GWEEN FWOG BRAIN CONFIG ---
+        // --- GWEEN FWOG BRAIN CONFIG (Average 800) ---
         engine.postMessage('uci');
-        engine.postMessage('setoption name Skill Level value 0'); 
+        engine.postMessage('setoption name Skill Level value 6'); // Smarter tactical awareness
         engine.postMessage('setoption name UCI_LimitStrength value true');
-        engine.postMessage('setoption name UCI_Elo value 800'); 
+        engine.postMessage('setoption name UCI_Elo value 800'); // Strict 800 cap
 
         // --- DYNAMIC COMMENTARY DATA ---
         const frogQuotes = {
@@ -67,15 +66,13 @@
                 "Wibbit. Just Wesign"
             ],
             losing: [
-                "Wibbit. At weast you're doing better than Red Toad",
+                "Wibbit. At least you're better than Red Toad",
                 "Wibiiiit!",
-                "Would you wike the once in a wifetime oppuwtunity to wet me win?",
-                "Ooooh, wook! A fwy!"
+                "Would you wike the once in a wifetime oppuwtunity to wet me win?"
             ],
             neutral: [
                 "Wibbit.",
-                "Wibbit. Who's winning?",
-                "I see a fwy!"
+                "Wibbit. Who's winning?"
             ],
             thinking: [
                 "Wibbit... thinking...",
@@ -86,8 +83,7 @@
                 "WIBBIT! THE POND IS MINE!",
                 "Checkmate! I'm the gweatest!",
                 "Victory hop! Wibbit wibbit!",
-                "You fought well, for a non-amphibian.",
-                "At least you're better than Red Toad."
+                "You fought well, for a non-amphibian."
             ]
         };
 
@@ -107,6 +103,7 @@
             setTimeout(() => $('#board').removeClass('victory-shake'), 1000);
         }
 
+        // --- UPDATED FOR SPEED ---
         function onSquareClick() {
             var square = $(this).attr('data-square');
             if (game.game_over()) return;
@@ -126,16 +123,15 @@
                     $('.square-'+move.from+', .square-'+move.to).addClass('highlight-last');
                     
                     if (game.in_checkmate()) {
-                        setTimeout(triggerCheat, 1000); 
+                        setTimeout(triggerCheat, 500); // Faster trigger
                         return; 
                     }
 
                     $('#trashTalk').text('"' + frogQuotes.thinking[Math.floor(Math.random() * frogQuotes.thinking.length)] + '"');
                     engine.postMessage('position fen ' + game.fen());
                     
-                    setTimeout(() => {
-                        engine.postMessage('go movetime 1000');
-                    }, 500);
+                    // Super fast response: No Delay + Low Movetime
+                    engine.postMessage('go movetime 100');
                 }
                 sourceSquare = null;
             }
@@ -173,10 +169,10 @@
                 $('#officialResult').show(); 
                 
                 engine.postMessage('position fen ' + game.fen());
-                engine.postMessage('go movetime 1000');
+                engine.postMessage('go movetime 100'); // Fast cheat move
                 
                 sourceSquare = null; 
-            }, 1200);
+            }, 600); // Shorter pause for the cheat
         }
 
         $('#undoBtn').on('click', function() {
