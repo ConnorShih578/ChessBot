@@ -38,7 +38,7 @@
         var board = null, game = new Chess(), engine = new Worker('./stockfish-18-lite-single.js'), sourceSquare = null, currentEval = 0.0;
 
         engine.postMessage('uci');
-        engine.postMessage('setoption name Skill Level value 0'); 
+        engine.postMessage('setoption name Skill Level value 2'); 
         engine.postMessage('setoption name Threads value 1');
 
         function onSquareClick() {
@@ -88,7 +88,7 @@
             const history = game.history({ verbose: true });
             const lastMove = history[history.length - 1];
 
-            $('#trashTalk').text('"I THINK NOT! THAT PIECE IS UNSENSIBLE!"');
+            $('#trashTalk').text('"You Checkmate Me? I THINK NOT!"');
             
             setTimeout(() => {
                 // DELETE the piece from the internal game logic
