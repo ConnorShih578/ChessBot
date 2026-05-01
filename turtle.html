@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tim Chess - Play Turtle</title>
+    <style>
+        :root {
+            --bg-color: #212121;
+            --sidebar-color: #2c2c2c;
+            --text-color: #ffffff;
+            --turtle-green: #4CAF50;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin: 0;
+            height: 100vh;
+        }
+
+        #game-container {
+            display: flex;
+            gap: 20px;
+            padding: 20px;
+            max-width: 1000px;
+            width: 100%;
+        }
+
+        /* Chessboard Placeholder - Integrates with your Click-to-Move JS */
+        #board {
+            width: 500px;
+            height: 500px;
+            background-color: #333;
+            border: 5px solid #444;
+        }
+
+        #sidebar {
+            flex: 1;
+            background-color: var(--sidebar-color);
+            border-radius: 8px;
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .bot-profile {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #444;
+        }
+
+        .avatar-container {
+            width: 60px;
+            height: 60px;
+            background-color: var(--turtle-green);
+            border-radius: 8px; /* Square/Flat design to avoid curve issues */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+        }
+
+        #chat-window {
+            flex: 1;
+            background: #1a1a1a;
+            border-radius: 4px;
+            padding: 10px;
+            overflow-y: auto;
+            margin-bottom: 10px;
+            min-height: 200px;
+        }
+
+        .bubble {
+            background: #3d3d3d;
+            padding: 8px 12px;
+            border-radius: 12px;
+            margin-bottom: 8px;
+            max-width: 85%;
+            font-size: 0.9em;
+        }
+
+        .controls {
+            display: flex;
+            gap: 10px;
+        }
+
+        button {
+            padding: 10px;
+            cursor: pointer;
+            background: #444;
+            color: white;
+            border: none;
+            border-radius: 4px;
+        }
+
+        button:hover {
+            background: #555;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>Tim Chess</h1>
+
+    <div id-="game-container">
+        <!-- The Board where Click-to-Move is handled -->
+        <div id="board"></div>
+
+        <div id="sidebar">
+            <div class="bot-profile">
+                <div class="avatar-container">
+                    <!-- Simple 2D Turtle Icon representation -->
+                    🐢
+                </div>
+                <div>
+                    <h3 style="margin:0;">Turtle</h3>
+                    <small>Rating: 1200 ELO</small>
+                </div>
+            </div>
+
+            <div id="chat-window">
+                <div class="bubble">Hewwo. Wet's just pway.</div>
+            </div>
+
+            <div class="controls">
+                <button onclick="handleUndo()">Undo Move</button>
+                <button onclick="resetGame()">New Game</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Turtle Bot Configuration
+        const turtleBot = {
+            name: "Turtle",
+            elo: 1200,
+            dialogue: {
+                onStart: "Hewwo. Wet's just pway.",
+                onWinning: "Yay, im winning!",
+                onBlunder: "Ahh, whatevew. It's just a game.",
+                onMistake: "Wow, dat was a bad move. Sucks fow you.",
+                onUndo: "Fine, take it back. I have pwentty of time.",
+                onIllegal: "You can't go dewe. Check de wuwwes."
+            }
+        };
+
+        // UCI Elo Setup Logic
+        function initEngine(engine) {
+            // Setting 1200 ELO using UCI Limit Strength
+            engine.postMessage('setoption name UCI_LimitStrength value true');
+            engine.postMessage('setoption name UCI_Elo value 1200');
+        }
+
+        function speak(text) {
+            const chat = document.getElementById('chat-window');
+            const bubble = document.createElement('div');
+            bubble.className = 'bubble';
+            bubble.innerText = text;
+            chat.appendChild(bubble);
+            chat.scrollTop = chat.scrollHeight;
+        }
+
+        function handleUndo() {
+            // Turtle doesn't mind undos but has an attitude about it
+            speak(turtleBot.dialogue.onUndo);
+            // Add your board undo logic here
+        }
+
+        // Placeholder for Game Evaluation Blunder Detection
+        function onMoveMade(scoreChange) {
+            if (scoreChange < -200) {
+                speak(turtleBot.dialogue.onBlunder);
+            } else if (scoreChange > 150) {
+                speak(turtleBot.dialogue.onWinning);
+            }
+        }
+    </script>
+</body>
+</html>
