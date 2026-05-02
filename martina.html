@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <title>Tim Chess - Martina</title>
     <link rel="stylesheet" href="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.css">
+    <link rel="icon" type="image/png" href="Faviconchess.png"/>
     <style>
         :root {
             --bg-color: #0d020d;
@@ -12,83 +13,39 @@
             --accent: #ad1457;
             --terminal: #f48fb1;
         }
-
-        body {
-            background-color: var(--bg-color); color: var(--text-color);
-            font-family: 'Segoe UI', system-ui, sans-serif;
-            display: flex; flex-direction: column; align-items: center;
-            margin: 0; padding: 20px; height: 100vh;
-        }
-
-        #game-container { display: flex; gap: 20px; width: 100%; max-width: 1000px; height: 600px; }
+        body { background-color: var(--bg-color); color: var(--text-color); font-family: 'Segoe UI', system-ui, sans-serif; display: flex; flex-direction: column; align-items: center; margin: 0; padding: 20px; min-height: 100vh; }
+        #game-container { display: flex; gap: 20px; width: 100%; max-width: 1000px; height: 600px; margin-top: 20px; }
         #board { width: 550px; flex-shrink: 0; border: 4px solid var(--accent); border-radius: 4px; box-shadow: 0 0 20px rgba(173, 20, 87, 0.3); }
-
-        #sidebar {
-            flex: 1; background-color: var(--sidebar-color); border-radius: 12px;
-            padding: 20px; display: flex; flex-direction: column;
-            border: 1px solid #333;
-        }
-
-        .bot-profile {
-            display: flex; align-items: center; gap: 15px; margin-bottom: 20px;
-            padding-bottom: 15px; border-bottom: 1px solid var(--accent);
-        }
-
-        .avatar {
-            width: 60px; height: 60px; background-color: var(--accent);
-            border-radius: 50%; display: flex; align-items: center;
-            justify-content: center; font-size: 2em;
-        }
-
-        #chat-window {
-            flex: 1; background: #000; border-radius: 8px; padding: 15px;
-            overflow-y: auto; margin-bottom: 15px; display: flex;
-            flex-direction: column; gap: 10px; border: 1px solid #222;
-        }
-
-        .bubble {
-            background: #2d0d2d; padding: 10px 14px; border-radius: 12px;
-            border-left: 3px solid var(--accent); align-self: flex-start;
-            max-width: 85%; font-size: 0.9em; font-family: 'Courier New', monospace;
-        }
-
+        #sidebar { flex: 1; background-color: var(--sidebar-color); border-radius: 12px; padding: 20px; display: flex; flex-direction: column; border: 1px solid #333; }
+        .bot-profile { display: flex; align-items: center; gap: 15px; margin-bottom: 20px; padding-bottom: 15px; border-bottom: 1px solid var(--accent); }
+        .avatar { width: 60px; height: 60px; background-color: var(--accent); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 2em; }
+        #chat-window { flex: 1; background: #000; border-radius: 8px; padding: 15px; overflow-y: auto; margin-bottom: 15px; display: flex; flex-direction: column; gap: 10px; border: 1px solid #222; }
+        .bubble { background: #2d0d2d; padding: 10px 14px; border-radius: 12px; border-left: 3px solid var(--accent); align-self: flex-start; max-width: 85%; font-size: 0.9em; font-family: 'Courier New', monospace; }
         .controls { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-        button {
-            padding: 12px; cursor: pointer; background: #333; color: white;
-            border: none; border-radius: 4px; font-weight: bold; text-transform: uppercase;
-        }
-
+        button { padding: 12px; cursor: pointer; background: #333; color: white; border: none; border-radius: 4px; font-weight: bold; text-transform: uppercase; }
         .primary-btn { background: var(--accent); }
         .highlight-sq { box-shadow: inset 0 0 3px 3px var(--terminal); }
         .highlight-last { background-color: rgba(173, 20, 87, 0.4) !important; }
         #eval-status { color: var(--accent); font-size: 0.75em; margin-top: 10px; letter-spacing: 1px; }
+        .nav-link { text-decoration: none; color: var(--terminal); font-weight: bold; font-size: 0.9em; margin-bottom: 10px; }
     </style>
 </head>
 <body>
-
-    <h1 style="color: var(--accent); margin-bottom: 10px;">TIM CHESS // MARTINA</h1>
-
+    <a href="index.html" class="nav-link">← BACK TO HOMEPAGE</a>
     <div id="game-container">
         <div id="board"></div>
         <div id="sidebar">
             <div class="bot-profile">
                 <div class="avatar">🤖</div>
-                <div>
-                    <h3 style="margin:0;">MARTINA-v4</h3>
-                    <small id="eval-status">SYSTEM: OPTIMAL</small>
-                </div>
+                <div><h3 style="margin:0;">MARTINA-v4</h3><small id="eval-status">SYSTEM: OPTIMAL</small></div>
             </div>
-            <div id="chat-window">
-                <div class="bubble">Junior told me you were a challenge. Junior was wrong.</div>
-            </div>
+            <div id="chat-window"></div>
             <div class="controls">
                 <button onclick="location.reload()">Reset</button>
                 <button class="primary-btn" onclick="location.reload()">New Game</button>
             </div>
         </div>
     </div>
-
-    <!-- MARTINA SCRIPTS HERE (UNMODIFIED) -->
     <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
     <script src="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>
@@ -97,17 +54,24 @@
         engine.postMessage('uci'); engine.postMessage('setoption name Skill Level value 20');
 
         const martinaQuotes = {
-            winning: ["Your position is mathematically unsalvageable.", "Calculating your inevitable resignation...", "Efficient. Final. Logical."],
-            losing: ["A temporary anomaly. Recalibrating.", "System alert: Efficiency dropping."],
-            neutral: ["You are fighting against math. Math always wins.", "Human intuition is merely a poorly optimized algorithm."],
-            thinking: ["Scanning for weaknesses...", "Running permutations...", "Optimizing strategy..."],
-            victory: ["As expected. Goodbye.", "The simulation has concluded. You lost."]
+            winning: ["Your position is mathematically unsalvageable.", "Calculating inevitable resignation...", "The board is a grid of errors, and you are the source."],
+            losing: ["A temporary anomaly. Recalibrating.", "System alert: Efficiency dropping. Adjusting parameters."],
+            neutral: ["You are fighting against math. Math always wins.", "Human intuition is a poorly optimized algorithm."],
+            thinking: ["Scanning for weaknesses...", "Running permutations...", "Accessing endgame database..."],
+            victory: ["As expected. Goodbye.", "Simulation concluded. You lost.", "Zero errors detected in final sequence."]
         };
 
         function speak(text) {
             const chat = $('#chat-window');
             chat.append(`<div class="bubble">${text}</div>`);
             chat.scrollTop(chat[0].scrollHeight);
+        }
+
+        function getMartinaTalk(eval) {
+            let cat = 'neutral';
+            if (eval < -2.0) cat = 'winning';
+            else if (eval > 2.0) cat = 'losing';
+            return martinaQuotes[cat][Math.floor(Math.random() * martinaQuotes[cat].length)];
         }
 
         function onSquareClick() {
@@ -147,14 +111,15 @@
                 board.position(game.fen());
                 $('.square-55d63').removeClass('highlight-last');
                 $('.square-'+move.from+', .square-'+move.to).addClass('highlight-last');
-                if (game.in_checkmate()) speak(martinaQuotes.victory[Math.floor(Math.random() * martinaQuotes.victory.length)]);
-                else speak(martinaQuotes.neutral[Math.floor(Math.random() * martinaQuotes.neutral.length)]);
+                if (game.in_checkmate()) { speak(martinaQuotes.victory[Math.floor(Math.random() * martinaQuotes.victory.length)]); $('#eval-status').text('STATUS: TERMINATED'); }
+                else speak(getMartinaTalk(currentEval));
             }
         };
 
         $(document).ready(function() {
             board = Chessboard('board', { position: 'start', draggable: false, pieceTheme: 'https://chessboardjs.com/img/chesspieces/wikipedia/{piece}.png' });
             $(document).on('click', '.square-55d63', onSquareClick);
+            speak("Junior told me you were a challenge. Junior was wrong.");
         });
     </script>
 </body>
