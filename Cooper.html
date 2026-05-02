@@ -2,101 +2,56 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Tim Chess - Koopa Troopa</title>
+    <title>Chess vs Koopa Troopa</title>
     <link rel="stylesheet" href="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.css">
     <style>
-        :root {
-            --bg-color: #fffde7;
-            --sidebar-color: #fff9c4;
-            --text-color: #5f4b00;
-            --koopa-yellow: #fbc02d;
-            --koopa-orange: #f57f17;
-        }
-
-        body {
-            background-color: var(--bg-color); color: var(--text-color);
-            font-family: 'Segoe UI', sans-serif; display: flex;
-            flex-direction: column; align-items: center; margin: 0; padding: 20px;
-        }
-
-        #game-container { display: flex; gap: 20px; width: 100%; max-width: 1000px; height: 600px; }
-        #board { width: 550px; flex-shrink: 0; border: 8px solid var(--koopa-yellow); border-radius: 12px; }
-
-        #sidebar {
-            flex: 1; background-color: var(--sidebar-color); border-radius: 20px;
-            padding: 20px; display: flex; flex-direction: column;
-            border: 4px solid var(--koopa-yellow); box-shadow: 0 4px 0 var(--koopa-orange);
-        }
-
-        .bot-profile { display: flex; align-items: center; gap: 15px; margin-bottom: 15px; }
-        .avatar {
-            width: 60px; height: 60px; background-color: var(--koopa-yellow);
-            border-radius: 50%; display: flex; align-items: center;
-            justify-content: center; font-size: 2em; border: 3px solid var(--koopa-orange);
-        }
-
-        #chat-window {
-            flex: 1; background: white; border-radius: 12px; padding: 15px;
-            overflow-y: auto; margin-bottom: 15px; border: 2px solid var(--koopa-yellow);
-        }
-
-        .bubble {
-            background: #fff9c4; padding: 10px; border-radius: 15px;
-            border-bottom-left-radius: 2px; align-self: flex-start;
-            margin-bottom: 8px; border: 1px solid var(--koopa-yellow);
-        }
-
-        .controls { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-        button {
-            padding: 12px; cursor: pointer; background: var(--koopa-yellow);
-            color: var(--text-color); border: none; border-radius: 10px;
-            font-weight: bold; box-shadow: 0 3px 0 var(--koopa-orange);
-        }
-
-        button:active { transform: translateY(2px); box-shadow: none; }
-        .highlight-sq { box-shadow: inset 0 0 3px 3px #ffee58; }
-        .highlight-last { background-color: rgba(251, 192, 45, 0.4) !important; }
+        :root { --bg: #fffde7; --side: #fff9c4; --text: #5f4b00; --yellow: #fbc02d; --orange: #f57f17; }
+        body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', sans-serif; display: flex; flex-direction: column; align-items: center; padding: 20px; }
+        #game-container { display: flex; gap: 20px; width: 100%; max-width: 1000px; height: 600px; margin-top: 15px; }
+        #board { width: 550px; border: 8px solid var(--yellow); border-radius: 12px; }
+        #sidebar { flex: 1; background: var(--side); border-radius: 20px; padding: 20px; display: flex; flex-direction: column; border: 4px solid var(--yellow); }
+        #chat-window { flex: 1; background: white; border-radius: 12px; padding: 15px; overflow-y: auto; margin-bottom: 15px; border: 2px solid var(--yellow); display: flex; flex-direction: column; gap: 8px; }
+        .bubble { background: #fff9c4; padding: 10px; border-radius: 15px; align-self: flex-start; border: 1px solid var(--yellow); }
+        button { padding: 12px; cursor: pointer; background: var(--yellow); border: none; border-radius: 10px; font-weight: bold; box-shadow: 0 3px 0 var(--orange); }
     </style>
 </head>
 <body>
-
-    <h1 style="color: var(--koopa-orange);">KOOPA CHESS</h1>
-
     <div id="game-container">
         <div id="board"></div>
         <div id="sidebar">
-            <div class="bot-profile">
-                <div class="avatar">🐢</div>
-                <div>
-                    <h3 style="margin:0;">King Koopa</h3>
-                    <small id="eval-bar">Evaluation: 0.0</small>
-                </div>
+            <div style="display:flex; align-items:center; gap:10px; margin-bottom:15px;">
+                <span style="font-size:2em;">🐢</span>
+                <h3>King Koopa</h3>
             </div>
-            <div id="chat-window">
-                <div class="bubble">He he he! King Koopa Troopa is in the building!</div>
-            </div>
-            <div class="controls">
-                <button id="undoBtn">Oops! Undo</button>
-                <button onclick="location.reload()">Reset Board</button>
-            </div>
+            <div id="chat-window"></div>
+            <button onclick="location.reload()">Rematch!</button>
         </div>
     </div>
-
-    <!-- KOOPA SCRIPTS REMAIN UNCHANGED FROM YOUR ORIGINAL -->
     <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
     <script src="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>
     <script>
-        /* ... Your existing Koopa logic here ... */
         var board = null, game = new Chess(), engine = new Worker('./stockfish-18-lite-single.js'), sourceSquare = null, currentEval = 0.0;
-        engine.postMessage('uci'); engine.postMessage('setoption name UCI_LimitStrength value true'); engine.postMessage('setoption name UCI_Elo value 1350');
+        engine.postMessage('uci'); engine.postMessage('setoption name UCI_Elo value 1350');
+
+        const quotes = {
+            winning: ["He he he! My shell is too tough for you!", "All my Koopas are going to be so proud of me!", "Are you sure you know how the horsey moves?", "I'm the king of the board! He he he!"],
+            losing: ["我头痛！ This isn't fair!", "Stop that! You're making my shell rattle!", "I'm going to tell Bowser you're mean!", "Is that move even legal? He he he... no it's not!"],
+            neutral: [
+                "Did you know Napoleon was once attacked by rabbits? He he he!",
+                "I'm not just a shell, I'm a mastermind! He he he!",
+                "Napoleon actually loved chess, but he was kind of bad at it. Just like you!",
+                "All hail King Koopa Troopa!",
+                "I'm thinking... but it's mostly about lettuce. He he he!",
+                "Did you know that Napoleon wore a necklace with a vial of poison attched in case he got captured?"
+            ],
+            victory: ["I WON! I WON! He he he!", "Next stop: Timchess.netlify.app!", "You got Koopa'd!"]
+        };
 
         function speak(text) {
             $('#chat-window').append(`<div class="bubble">${text}</div>`);
             $('#chat-window').scrollTop($('#chat-window')[0].scrollHeight);
         }
-
-        const randomFacts = ["All hail King Koopa Troopa!", "I'm not just a shell, I'm a mastermind! He he he!", "Are you even trying? 我头痛！"];
 
         function onSquareClick() {
             var square = $(this).attr('data-square');
@@ -113,39 +68,30 @@
                 $('.square-55d63').removeClass('highlight-sq');
                 if (move) {
                     board.position(game.fen());
-                    $('.square-55d63').removeClass('highlight-last');
-                    $('.square-'+move.from+', .square-'+move.to).addClass('highlight-last');
                     engine.postMessage('position fen ' + game.fen());
-                    engine.postMessage('go movetime 1000');
+                    engine.postMessage('go movetime 800');
                 }
                 sourceSquare = null;
             }
         }
 
         engine.onmessage = function(e) {
-            if (e.data.includes('score cp')) {
-                let score = parseInt(e.data.split('cp ')[1].split(' ')[0]);
-                currentEval = (game.turn() === 'b' ? score : -score) / 100;
-                $('#eval-bar').text('Evaluation: ' + currentEval.toFixed(1));
-            }
+            if (e.data.includes('score cp')) currentEval = (game.turn() === 'b' ? parseInt(e.data.split('cp ')[1]) : -parseInt(e.data.split('cp ')[1])) / 100;
             if (e.data.startsWith('bestmove')) {
                 var m = e.data.split(' ')[1];
-                var move = game.move({ from: m.substring(0, 2), to: m.substring(2, 4), promotion: 'q' });
+                game.move({ from: m.substring(0, 2), to: m.substring(2, 4), promotion: 'q' });
                 board.position(game.fen());
-                $('.square-55d63').removeClass('highlight-last');
-                $('.square-'+move.from+', .square-'+move.to).addClass('highlight-last');
-                speak(randomFacts[Math.floor(Math.random() * randomFacts.length)]);
+                let cat = 'neutral';
+                if (currentEval < -1.5) cat = 'winning';
+                else if (currentEval > 1.5) cat = 'losing';
+                speak(game.in_checkmate() ? quotes.victory[0] : quotes[cat][Math.floor(Math.random() * quotes[cat].length)]);
             }
         };
-
-        $('#undoBtn').on('click', function() {
-            game.undo(); game.undo(); board.position(game.fen());
-            speak("Wait, you're taking it back? 我头痛！");
-        });
 
         $(document).ready(function() {
             board = Chessboard('board', { position: 'start', draggable: false, pieceTheme: 'https://chessboardjs.com/img/chesspieces/wikipedia/{piece}.png' });
             $(document).on('click', '.square-55d63', onSquareClick);
+            speak("He he he! King Koopa Troopa is in the building!");
         });
     </script>
 </body>
