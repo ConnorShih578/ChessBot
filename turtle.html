@@ -3,7 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tim Chess - Play Turtle</title>
+    <title>Tim Chess - Play Gween Turtle</title>
+    <link rel="stylesheet" href="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.css">
     <style>
         :root {
             --bg-color: #212121;
@@ -20,168 +21,182 @@
             flex-direction: column;
             align-items: center;
             margin: 0;
+            padding: 20px;
             height: 100vh;
         }
 
         #game-container {
-            display: flex;
-            gap: 20px;
-            padding: 20px;
-            max-width: 1000px;
-            width: 100%;
+            display: flex; gap: 20px; width: 100%; max-width: 1000px; height: 600px;
         }
 
-        /* Chessboard Placeholder - Integrates with your Click-to-Move JS */
-        #board {
-            width: 500px;
-            height: 500px;
-            background-color: #333;
-            border: 5px solid #444;
-        }
+        #board { width: 550px; flex-shrink: 0; border: 5px solid #444; border-radius: 4px; }
 
         #sidebar {
-            flex: 1;
-            background-color: var(--sidebar-color);
-            border-radius: 8px;
-            padding: 15px;
-            display: flex;
-            flex-direction: column;
+            flex: 1; background-color: var(--sidebar-color); border-radius: 12px;
+            padding: 20px; display: flex; flex-direction: column;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
         }
 
         .bot-profile {
-            display: flex;
-            align-items: center;
-            gap: 15px;
-            margin-bottom: 20px;
-            padding-bottom: 10px;
-            border-bottom: 1px solid #444;
+            display: flex; align-items: center; gap: 15px; margin-bottom: 20px;
+            padding-bottom: 15px; border-bottom: 1px solid #444;
         }
 
-        .avatar-container {
-            width: 60px;
-            height: 60px;
-            background-color: var(--turtle-green);
-            border-radius: 8px; /* Square/Flat design to avoid curve issues */
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: bold;
+        .avatar {
+            width: 60px; height: 60px; background-color: var(--turtle-green);
+            border-radius: 50%; display: flex; align-items: center;
+            justify-content: center; font-size: 2em;
         }
 
         #chat-window {
-            flex: 1;
-            background: #1a1a1a;
-            border-radius: 4px;
-            padding: 10px;
-            overflow-y: auto;
-            margin-bottom: 10px;
-            min-height: 200px;
+            flex: 1; background: #1a1a1a; border-radius: 8px; padding: 15px;
+            overflow-y: auto; margin-bottom: 15px; display: flex;
+            flex-direction: column; gap: 10px;
         }
 
         .bubble {
-            background: #3d3d3d;
-            padding: 8px 12px;
-            border-radius: 12px;
-            margin-bottom: 8px;
-            max-width: 85%;
-            font-size: 0.9em;
+            background: #3d3d3d; padding: 10px 14px; border-radius: 15px;
+            border-bottom-left-radius: 2px; align-self: flex-start;
+            max-width: 85%; font-size: 0.95em; line-height: 1.4;
         }
 
-        .controls {
-            display: flex;
-            gap: 10px;
-        }
+        .controls { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 
         button {
-            padding: 10px;
-            cursor: pointer;
-            background: #444;
-            color: white;
-            border: none;
-            border-radius: 4px;
+            padding: 12px; cursor: pointer; background: #444; color: white;
+            border: none; border-radius: 6px; font-weight: bold;
         }
 
-        button:hover {
-            background: #555;
-        }
+        button:hover { background: #555; }
+        .primary-btn { background: var(--turtle-green); }
+
+        .highlight-sq { box-shadow: inset 0 0 3px 3px #4CAF50; }
+        .highlight-last { background-color: rgba(76, 175, 80, 0.4) !important; }
     </style>
 </head>
 <body>
 
-    <h1>Tim Chess</h1>
+    <h1 style="color: var(--turtle-green);">Tim Chess</h1>
 
-    <div id-="game-container">
-        <!-- The Board where Click-to-Move is handled -->
+    <div id="game-container">
         <div id="board"></div>
 
         <div id="sidebar">
             <div class="bot-profile">
-                <div class="avatar-container">
-                    <!-- Simple 2D Turtle Icon representation -->
-                    🐢
-                </div>
+                <div class="avatar">🐢</div>
                 <div>
-                    <h3 style="margin:0;">Turtle</h3>
-                    <small>Rating: 1200 ELO</small>
+                    <h3 style="margin:0;">Gween Turtle</h3>
+                    <small style="color: #aaa;">Status: Slow but steady</small>
                 </div>
             </div>
 
             <div id="chat-window">
-                <div class="bubble">Hewwo. Wet's just pway.</div>
+                <div class="bubble">Hi, I’m Gween Turtle</div>
             </div>
 
             <div class="controls">
-                <button onclick="handleUndo()">Undo Move</button>
-                <button onclick="resetGame()">New Game</button>
+                <button id="undoBtn">Undo Move</button>
+                <button class="primary-btn" onclick="location.reload()">New Game</button>
             </div>
         </div>
     </div>
 
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <script src="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>
     <script>
-        // Turtle Bot Configuration
-        const turtleBot = {
-            name: "Turtle",
-            elo: 1200,
-            dialogue: {
-                onStart: "Hewwo. Wet's just pway.",
-                onWinning: "Yay, im winning!",
-                onBlunder: "Ahh, whatevew. It's just a game.",
-                onMistake: "Wow, dat was a bad move. Sucks fow you.",
-                onUndo: "Fine, take it back. I have pwentty of time.",
-                onIllegal: "You can't go dewe. Check de wuwwes."
-            }
-        };
+        var board = null, 
+            game = new Chess(), 
+            engine = new Worker('./stockfish-18-lite-single.js'), 
+            sourceSquare = null,
+            currentEval = 0;
 
-        // UCI Elo Setup Logic
-        function initEngine(engine) {
-            // Setting 1200 ELO using UCI Limit Strength
-            engine.postMessage('setoption name UCI_LimitStrength value true');
-            engine.postMessage('setoption name UCI_Elo value 1200');
-        }
+        // Standard engine logic (1350 ELO)
+        engine.postMessage('uci');
+        engine.postMessage('setoption name UCI_LimitStrength value true');
+        engine.postMessage('setoption name UCI_Elo value 1350');
+        engine.postMessage('setoption name Threads value 1');
+
+        // Commentary Pools
+        const pools = {
+            winning: ["You Will Suffer From Turtle", "我是更好", "eating nois", "Slow... but very steady. eating nois", "They say slow and steady wins the race, ask my friend Gween Fwog, he knows."],
+            losing: ["*turtle noises* (nervous)", "I have pwentty of time... I think.", "Do you like my gween shell?", "eating nois (slowly)", "I wonder why my shell looks different...", "Oh, no! My shell is cracking!"],
+            neutral: ["Hi, I’m Gween Turtle", "*turtle noises*", "eating nois", "Do you like my gween shell?", "I look better than King Koopa, right? My shell is more GWEEN."]
+        };
 
         function speak(text) {
             const chat = document.getElementById('chat-window');
-            const bubble = document.createElement('div');
-            bubble.className = 'bubble';
-            bubble.innerText = text;
-            chat.appendChild(bubble);
+            $('#chat-window').append(`<div class="bubble">${text}</div>`);
             chat.scrollTop = chat.scrollHeight;
         }
 
-        function handleUndo() {
-            // Turtle doesn't mind undos but has an attitude about it
-            speak(turtleBot.dialogue.onUndo);
-            // Add your board undo logic here
+        function getCommentary() {
+            let pool = pools.neutral;
+            if (currentEval > 1.5) pool = pools.winning;
+            if (currentEval < -1.5) pool = pools.losing;
+            return pool[Math.floor(Math.random() * pool.length)];
         }
 
-        // Placeholder for Game Evaluation Blunder Detection
-        function onMoveMade(scoreChange) {
-            if (scoreChange < -200) {
-                speak(turtleBot.dialogue.onBlunder);
-            } else if (scoreChange > 150) {
-                speak(turtleBot.dialogue.onWinning);
+        function onSquareClick() {
+            var square = $(this).attr('data-square');
+            if (game.game_over()) return;
+
+            if (sourceSquare === null) {
+                var piece = game.get(square);
+                if (piece && piece.color === game.turn()) {
+                    sourceSquare = square;
+                    $('.square-55d63').removeClass('highlight-sq');
+                    $('.square-' + square).addClass('highlight-sq');
+                }
+            } else {
+                var move = game.move({ from: sourceSquare, to: square, promotion: 'q' });
+                $('.square-55d63').removeClass('highlight-sq');
+                
+                if (move) {
+                    board.position(game.fen());
+                    $('.square-55d63').removeClass('highlight-last');
+                    $('.square-'+move.from+', .square-'+move.to).addClass('highlight-last');
+                    
+                    engine.postMessage('position fen ' + game.fen());
+                    engine.postMessage('go movetime 1000'); 
+                }
+                sourceSquare = null;
             }
         }
+
+        engine.onmessage = function(e) {
+            // Track evaluation for commentary
+            if (e.data.includes('score cp')) {
+                let cp = parseInt(e.data.split('cp ')[1].split(' ')[0]);
+                // Flip score if bot is black
+                currentEval = (game.turn() === 'b' ? cp : -cp) / 100;
+            }
+
+            if (e.data.startsWith('bestmove')) {
+                var m = e.data.split(' ')[1];
+                var move = game.move({ from: m.substring(0, 2), to: m.substring(2, 4), promotion: 'q' });
+                board.position(game.fen());
+                $('.square-55d63').removeClass('highlight-last');
+                $('.square-'+move.from+', .square-'+move.to).addClass('highlight-last');
+                
+                speak(getCommentary());
+            }
+        };
+
+        $('#undoBtn').on('click', function() {
+            game.undo(); game.undo(); 
+            board.position(game.fen());
+            $('.square-55d63').removeClass('highlight-last');
+            speak("Fine, take it back. I have pwentty of time.");
+        });
+
+        $(document).ready(function() {
+            board = Chessboard('board', { 
+                position: 'start', draggable: false, 
+                pieceTheme: 'https://chessboardjs.com/img/chesspieces/wikipedia/{piece}.png' 
+            });
+            $(document).on('click', '.square-55d63', onSquareClick);
+        });
     </script>
 </body>
 </html>
