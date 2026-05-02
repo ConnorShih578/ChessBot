@@ -2,108 +2,125 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Chess vs Gween Fwog</title>
+    <title>Tim Chess - Gween Fwog</title>
     <link rel="stylesheet" href="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.css">
     <style>
-        body { font-family: 'Comic Sans MS', 'Chalkboard SE','Comic Neue' ,Cursive, sans-serif; display: flex; flex-direction: column; align-items: center; background: #e8f5e9; color: #2e7d32; padding-top: 20px; }
-        #board { width: 400px; max-width: 95vw; border: 6px solid #4caf50; border-radius: 12px; }
-        #trashTalk { background: #2e7d32; color: white; padding: 15px; border-radius: 20px; border: 4px solid #81c784; margin-bottom: 15px; width: 380px; text-align: center; min-height: 40px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); font-weight: bold; transition: background 0.3s; }
+        :root {
+            --bg-color: #e8f5e9;
+            --sidebar-color: #c8e6c9;
+            --fwog-dark: #2e7d32;
+            --fwog-light: #4caf50;
+            --cheat-red: #d32f2f;
+        }
+
+        body {
+            background-color: var(--bg-color); color: var(--fwog-dark);
+            font-family: 'Comic Neue', 'Comic Sans MS', cursive;
+            display: flex; flex-direction: column; align-items: center; margin: 0; padding: 20px;
+        }
+
+        #game-container { display: flex; gap: 20px; width: 100%; max-width: 1000px; height: 600px; }
+        #board { width: 550px; flex-shrink: 0; border: 8px solid var(--fwog-light); border-radius: 20px; overflow: hidden; }
+
+        #sidebar {
+            flex: 1; background-color: var(--sidebar-color); border-radius: 30px;
+            padding: 20px; display: flex; flex-direction: column;
+            border: 4px solid var(--fwog-dark);
+        }
+
+        .bot-profile { display: flex; align-items: center; gap: 15px; margin-bottom: 15px; }
+        .avatar {
+            width: 65px; height: 65px; background-color: var(--fwog-light);
+            border-radius: 50%; display: flex; align-items: center;
+            justify-content: center; font-size: 2.2em; border: 4px solid white;
+        }
+
+        #chat-window {
+            flex: 1; background: white; border-radius: 20px; padding: 15px;
+            overflow-y: auto; margin-bottom: 15px; border: 2px dashed var(--fwog-dark);
+        }
+
+        .bubble {
+            background: #f1f8e9; padding: 12px; border-radius: 18px;
+            border-bottom-left-radius: 2px; align-self: flex-start;
+            margin-bottom: 10px; border: 1px solid var(--fwog-light); font-weight: bold;
+        }
+
+        .controls { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        button {
+            padding: 12px; cursor: pointer; background: var(--fwog-light);
+            color: white; border: none; border-radius: 25px;
+            font-weight: bold; font-family: inherit; font-size: 1.1em;
+        }
+
+        #officialResult { color: var(--cheat-red); font-weight: bold; display: none; text-align: center; margin-top: 5px; }
         .highlight-sq { box-shadow: inset 0 0 3px 3px #a5d6a7; }
         .highlight-last { background-color: rgba(129, 199, 132, 0.6) !important; }
-        .nav-links { margin-bottom: 15px; }
-        .nav-link { text-decoration: none; color: #1b5e20; font-weight: bold; }
-        .cheat-text { color: #d32f2f; font-weight: bold; display: none; margin-top: 15px; background: white; padding: 5px 15px; border-radius: 10px; border: 2px solid #d32f2f; }
-        button { margin: 10px; padding: 10px 25px; background: #4caf50; color: white; border: none; border-radius: 25px; font-weight: bold; cursor: pointer; }
         
         @keyframes shake {
-            0% { transform: translate(1px, 1px) rotate(0deg); }
-            10% { transform: translate(-1px, -2px) rotate(-1deg); }
-            20% { transform: translate(-3px, 0px) rotate(1deg); }
-            30% { transform: translate(3px, 2px) rotate(0deg); }
-            40% { transform: translate(1px, -1px) rotate(1deg); }
-            50% { transform: translate(-1px, 2px) rotate(-1deg); }
-            60% { transform: translate(-3px, 1px) rotate(0deg); }
-            70% { transform: translate(3px, 1px) rotate(-1deg); }
-            80% { transform: translate(-1px, -1px) rotate(1deg); }
-            90% { transform: translate(1px, 2px) rotate(0deg); }
-            100% { transform: translate(1px, -2px) rotate(-1deg); }
+            0%, 100% { transform: rotate(0deg); }
+            25% { transform: rotate(1deg); }
+            75% { transform: rotate(-1deg); }
         }
-        .victory-shake { animation: shake 0.5s; animation-iteration-count: 2; }
+        .victory-shake { animation: shake 0.2s infinite; }
     </style>
 </head>
 <body>
 
-    <div class="nav-links">
-        <a href="index.html" class="nav-link">⬅️Back to Homepage</a>
+    <h1 style="font-size: 2.5em; margin-bottom: 10px;">🐸 Gween Fwog Chess 🐸</h1>
+
+    <div id="game-container">
+        <div id="board"></div>
+        <div id="sidebar">
+            <div class="bot-profile">
+                <div class="avatar">🐸</div>
+                <div>
+                    <h3 style="margin:0;">Gween Fwog</h3>
+                    <div id="officialResult">YOU WON! (Fwog Cheated)</div>
+                </div>
+            </div>
+            <div id="chat-window">
+                <div class="bubble">Wibbit! Let's have a sensible game.</div>
+            </div>
+            <div class="controls">
+                <button id="undoBtn">Undo?</button>
+                <button onclick="location.reload()">New Game</button>
+            </div>
+        </div>
     </div>
 
-    <div id="trashTalk">"Wibbit! Let's have a sensible game."</div>
-    <div id="board"></div>
-    <div id="officialResult" class="cheat-text">OFFICIAL RESULT: YOU WON! (Fwog Cheated)</div>
-
-    <div>
-        <button id="undoBtn">Undo Move</button>
-        <button onclick="location.reload()">New Game</button>
-    </div>
-
+    <!-- FWOG SCRIPTS WITH UPDATED CHAT WRITING -->
     <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
     <script src="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>
     <script>
         var board = null, game = new Chess(), engine = new Worker('./stockfish-18-lite-single.js'), sourceSquare = null, currentEval = 0.0;
+        engine.postMessage('uci'); engine.postMessage('setoption name UCI_LimitStrength value true'); engine.postMessage('setoption name UCI_Elo value 1000');
 
-        // --- GWEEN FWOG BRAIN CONFIG (Average 800) ---
-        engine.postMessage('uci');
-        engine.postMessage('setoption name Skill Level value 6'); // Smarter tactical awareness
-        engine.postMessage('setoption name UCI_LimitStrength value true');
-        engine.postMessage('setoption name UCI_Elo value 1000'); // Strict 800 cap
+        function speak(text) {
+            $('#chat-window').append(`<div class="bubble">${text}</div>`);
+            $('#chat-window').scrollTop($('#chat-window')[0].scrollHeight);
+        }
 
-        // --- DYNAMIC COMMENTARY DATA ---
         const frogQuotes = {
-            winning: [
-                "You're going to woose.",
-                "Ha ha ha, you're woosing!",
-                "Wibbit. Just Wesign"
-            ],
-            losing: [
-                "Wibbit. At least you're better than Red Toad",
-                "Wibiiiit!",
-                "Would you wike the once in a wifetime oppuwtunity to wet me win?"
-            ],
-            neutral: [
-                "Wibbit.",
-                "Wibbit. Who's winning?"
-            ],
-            thinking: [
-                "Wibbit... thinking...",
-                "Searching for fwies...",
-                "Contempwating the wiwypad..."
-            ],
-            victory: [
-                "WIBBIT! THE POND IS MINE!",
-                "Checkmate! I'm the gweatest!",
-                "Victory hop! Wibbit wibbit!",
-                "You fought well, for a non-amphibian."
-            ]
+            thinking: ["Wibbit... thinking...", "Searching for fwies...", "Contempwating the wiwypad..."],
+            victory: ["WIBBIT! THE POND IS MINE!", "Checkmate! I'm the gweatest!"],
+            neutral: ["Wibbit.", "Wibbit. Who's winning?"]
         };
 
-        function getFrogTalk(evaluation) {
-            let category = 'neutral';
-            if (evaluation > 1.5) category = 'winning';
-            if (evaluation < -1.5) category = 'losing';
-            const list = frogQuotes[category];
-            return list[Math.floor(Math.random() * list.length)];
+        function triggerCheat() {
+            const history = game.history({ verbose: true });
+            const lastMove = history[history.length - 1];
+            speak("You Checkmate Me? I THINK NOT!");
+            setTimeout(() => {
+                game.remove(lastMove.to); game.load(game.fen()); board.position(game.fen());
+                speak("There. Much better. My turn! Wibbit!");
+                $('#officialResult').show();
+                engine.postMessage('position fen ' + game.fen());
+                engine.postMessage('go movetime 100');
+            }, 600);
         }
 
-        function triggerVictory() {
-            const winMsg = frogQuotes.victory[Math.floor(Math.random() * frogQuotes.victory.length)];
-            $('#trashTalk').css('background', '#1b5e20'); 
-            $('#trashTalk').text('"' + winMsg + '"');
-            $('#board').addClass('victory-shake');
-            setTimeout(() => $('#board').removeClass('victory-shake'), 1000);
-        }
-
-        // --- UPDATED FOR SPEED ---
         function onSquareClick() {
             var square = $(this).attr('data-square');
             if (game.game_over()) return;
@@ -121,16 +138,9 @@
                     board.position(game.fen());
                     $('.square-55d63').removeClass('highlight-last');
                     $('.square-'+move.from+', .square-'+move.to).addClass('highlight-last');
-                    
-                    if (game.in_checkmate()) {
-                        setTimeout(triggerCheat, 500); // Faster trigger
-                        return; 
-                    }
-
-                    $('#trashTalk').text('"' + frogQuotes.thinking[Math.floor(Math.random() * frogQuotes.thinking.length)] + '"');
+                    if (game.in_checkmate()) { triggerCheat(); return; }
+                    speak(frogQuotes.thinking[Math.floor(Math.random() * frogQuotes.thinking.length)]);
                     engine.postMessage('position fen ' + game.fen());
-                    
-                    // Super fast response: No Delay + Low Movetime
                     engine.postMessage('go movetime 100');
                 }
                 sourceSquare = null;
@@ -138,55 +148,24 @@
         }
 
         engine.onmessage = function(e) {
-            if (e.data.includes('score cp')) currentEval = parseInt(e.data.split('cp ')[1].split(' ')[0]) / 100;
             if (e.data.startsWith('bestmove')) {
                 var m = e.data.split(' ')[1];
                 var move = game.move({ from: m.substring(0, 2), to: m.substring(2, 4), promotion: 'q' });
                 board.position(game.fen());
                 $('.square-55d63').removeClass('highlight-last');
                 $('.square-'+move.from+', .square-'+move.to).addClass('highlight-last');
-                
-                if (game.in_checkmate()) {
-                    triggerVictory();
-                } else {
-                    $('#trashTalk').text('"' + getFrogTalk(currentEval) + '"');
-                }
+                if (game.in_checkmate()) { speak(frogQuotes.victory[Math.floor(Math.random() * frogQuotes.victory.length)]); $('#board').addClass('victory-shake'); }
+                else speak(frogQuotes.neutral[Math.floor(Math.random() * frogQuotes.neutral.length)]);
             }
         };
 
-        function triggerCheat() {
-            const history = game.history({ verbose: true });
-            const lastMove = history[history.length - 1];
-
-            $('#trashTalk').text('"You Checkmate Me? I THINK NOT!"');
-            
-            setTimeout(() => {
-                game.remove(lastMove.to); 
-                game.load(game.fen()); 
-                board.position(game.fen());
-                
-                $('#trashTalk').text('"There. Much better. My turn! Wibbit!"');
-                $('#officialResult').show(); 
-                
-                engine.postMessage('position fen ' + game.fen());
-                engine.postMessage('go movetime 100'); // Fast cheat move
-                
-                sourceSquare = null; 
-            }, 600); // Shorter pause for the cheat
-        }
-
         $('#undoBtn').on('click', function() {
             game.undo(); game.undo(); board.position(game.fen());
-            $('.square-55d63').removeClass('highlight-last');
-            $('#trashTalk').css('background', '#2e7d32');
-            $('#trashTalk').text('"Wibbit! A do-over?"');
+            speak("Wibbit! A do-over?");
         });
 
         $(document).ready(function() {
-            board = Chessboard('board', {
-                position: 'start', draggable: false,
-                pieceTheme: 'https://chessboardjs.com/img/chesspieces/wikipedia/{piece}.png'
-            });
+            board = Chessboard('board', { position: 'start', draggable: false, pieceTheme: 'https://chessboardjs.com/img/chesspieces/wikipedia/{piece}.png' });
             $(document).on('click', '.square-55d63', onSquareClick);
         });
     </script>
