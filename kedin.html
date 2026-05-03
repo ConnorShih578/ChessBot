@@ -93,7 +93,7 @@
                 $('.square-55d63').removeClass('highlight-sq');
                 board.position(game.fen());
                 if (game.in_checkmate()) { 
-                    speak("NOPE! I CHEAT! Wibbit!"); 
+                    speak("You Checkmate me?? I THINK NOT!!!"); 
                     game.undo(); 
                     game.remove(move.to); // "Cheats" by removing the piece that mated him
                     board.position(game.fen()); 
