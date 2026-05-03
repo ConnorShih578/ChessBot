@@ -15,8 +15,7 @@
         .avatar { width: 60px; height: 60px; background: var(--accent); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 2em; }
         #chat-window { flex: 1; background: #000; border-radius: 8px; padding: 15px; overflow-y: auto; margin-bottom: 15px; display: flex; flex-direction: column; gap: 10px; border: 1px solid #222; }
         .bubble { background: #2d0d2d; padding: 10px 14px; border-radius: 12px; border-left: 3px solid var(--accent); align-self: flex-start; max-width: 85%; font-size: 0.9em; font-family: 'Courier New', monospace; }
-        .controls { display: grid; grid-template-columns: 1fr; gap: 10px; }
-        button { padding: 12px; cursor: pointer; background: var(--accent); color: white; border: none; border-radius: 4px; font-weight: bold; text-transform: uppercase; }
+        button { padding: 12px; cursor: pointer; background: var(--accent); color: white; border: none; border-radius: 4px; font-weight: bold; text-transform: uppercase; width: 100%; }
         #eval-status { color: var(--accent); font-size: 0.75em; margin-top: 10px; letter-spacing: 1px; }
         .nav-link { text-decoration: none; color: var(--terminal); font-weight: bold; margin-bottom: 10px; }
     </style>
@@ -36,7 +35,7 @@
             </div>
         </div>
     </div>
-    <footer><p>This particular bot's styling and commentary was made using AI</p></footer>
+    <footer><p>A majority of this bot and page was made with AI</p></footer>
     <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
     <script src="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>
@@ -51,34 +50,42 @@
                 "The board is a grid of errors, and you are the source.",
                 "Efficiency at 99.8%. Your resistance is statistically insignificant.",
                 "I have seen every outcome from this position. You lose in all of them.",
-                "Your structure is collapsing like poorly written legacy code."
+                "Your structure is collapsing like poorly written legacy code.",
+                "I am processing your defeat in 4 dimensions.",
+                "Warning: Tactical irrelevance detected on your side of the board."
             ],
             losing: [
                 "A temporary anomaly. Recalibrating logic gates.",
                 "System alert: Efficiency dropping. Adjusting parameters.",
                 "Unexpected move detected. Re-simulating entire tree.",
                 "Probability of victory decreasing... attempting emergency optimization.",
-                "Are you... cheating? My sensors indicate an impossible proficiency."
+                "Are you... cheating? My sensors indicate an impossible proficiency.",
+                "Hardware stress detected. How are you finding these lines?",
+                "Re-routing processing power to tactical defense."
             ],
             neutral: [
                 "You are fighting against math. Math always wins.",
                 "Human intuition is a poorly optimized algorithm.",
                 "Evaluating current permutations. Please wait.",
                 "Is this your best effort? It is insufficient.",
-                "My silicon brain processes 10,000 futures per second. You process zero."
+                "My silicon brain processes 10,000 futures per second. You process zero.",
+                "Chess is a solved game. You just haven't realized it yet.",
+                "Your biological limitations are becoming apparent."
             ],
             thinking: [
                 "Scanning for weaknesses...",
                 "Running permutations...",
                 "Accessing endgame database...",
                 "Optimizing move path...",
-                "Analyzing structural vulnerabilities..."
+                "Analyzing structural vulnerabilities...",
+                "Searching for the most efficient path to mate."
             ],
             victory: [
                 "As expected. Simulation concluded.",
                 "Zero errors detected in final sequence. You have been deleted.",
                 "The result was determined 14 moves ago. Goodbye.",
-                "Process terminated. Winner: Martina."
+                "Process terminated. Winner: Martina.",
+                "Final score: Logic 1, Emotion 0."
             ]
         };
 
