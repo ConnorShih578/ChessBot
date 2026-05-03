@@ -97,8 +97,8 @@
 
         function getMartinaTalk(eval) {
             let cat = 'neutral';
-            if (eval < -2.0) cat = 'winning';
-            else if (eval > 2.0) cat = 'losing';
+            if (eval > 2.0) cat = 'winning';
+            else if (eval < -2.0) cat = 'losing';
             const list = martinaQuotes[cat];
             return list[Math.floor(Math.random() * list.length)];
         }
