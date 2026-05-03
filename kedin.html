@@ -12,7 +12,7 @@
         #sidebar { flex: 1; background: var(--side); border-radius: 30px; padding: 20px; display: flex; flex-direction: column; border: 4px solid var(--dark); }
         #chat-window { flex: 1; background: white; border-radius: 20px; padding: 15px; overflow-y: auto; margin-bottom: 15px; border: 2px dashed var(--dark); display: flex; flex-direction: column; gap: 10px; }
         .bubble { background: #f1f8e9; padding: 12px; border-radius: 18px; align-self: flex-start; border: 1px solid var(--light); font-weight: bold; }
-        button { padding: 12px; background: var(--light); color: white; border: none; border-radius: 25px; font-weight: bold; width: 100%; }
+        button { padding: 12px; background: var(--light); color: white; border: none; border-radius: 25px; font-weight: bold; width: 100%; cursor: pointer; }
     </style>
 </head>
 <body>
@@ -32,49 +32,11 @@
         engine.postMessage('uci');
 
         const frogQuotes = {
-            winning: [
-                "You're going to woose.", 
-                "Ha ha ha, you're woosing!", 
-                "Wibbit. Just Wesign", 
-                "I'm the gweatest fwog ever!", 
-                "My pond, my wules, my victory!", 
-                "Wibbit! You're in twouble now!",
-                "Look at my gween army hop!",
-                "Once in a wifetime oppowtunity to beat me... and you blew it!"
-            ],
-            losing: [
-                "Wibbit. At least you're better than Red Toad", 
-                "Wibiiiit! Stop that!", 
-                "Would you wike to wet me win?", 
-                "My hopping skills are failing me...", 
-                "Wait! That wasn't supposed to happen!", 
-                "Is it raining? My focus is wet.",
-                "Wibbit! This wiwypad is too slippery!",
-                "You're being a meanie to a wittwe fwog!"
-            ],
-            neutral: [
-                "Wibbit.", 
-                "Wibbit. Who's winning?", 
-                "Do you have any fwies?", 
-                "I like the gween pieces best.", 
-                "Wibbit... chess is hard.",
-                "Did you know fwogs are the best at hopping squares?",
-                "Wibbit wibbit wibbit!"
-            ],
-            thinking: [
-                "Wibbit... thinking...", 
-                "Searching for fwies...", 
-                "Contempwating the wiwypad...", 
-                "Counting my hops...",
-                "Concentwating vewy hard!",
-                "Wibbit... wait a second..."
-            ],
-            victory: [
-                "WIBBIT! THE POND IS MINE!", 
-                "Checkmate! I'm the gweatest!", 
-                "Victory hop! Wibbit wibbit!",
-                "I told you! I'm the king of the swamp!"
-            ]
+            winning: ["You're going to woose.", "Ha ha ha, you're woosing!", "Wibbit. Just Wesign", "I'm the gweatest fwog ever!", "My pond, my wules, my victory!", "Wibbit! You're in twouble now!"],
+            losing: ["Wibbit. No fair!", "Wibiiiit! Stop that!", "Would you wike to wet me win?", "My hopping skills are failing me...", "Wait! That wasn't supposed to happen!"],
+            neutral: ["Wibbit.", "Wibbit. Who's winning?", "Do you have any fwies?", "I like the gween pieces best.", "Wibbit wibbit wibbit!"],
+            thinking: ["Wibbit... thinking...", "Searching for fwies...", "Counting my hops...", "Wibbit... wait a second..."],
+            victory: ["WIBBIT! THE POND IS MINE!", "Checkmate! I'm the gweatest!", "Victory hop! Wibbit wibbit!"]
         };
 
         function speak(text) {
@@ -85,20 +47,36 @@
         function onSquareClick() {
             var square = $(this).attr('data-square');
             if (game.game_over()) return;
+            
             var move = game.move({ from: $('.highlight-sq').attr('data-square'), to: square, promotion: 'q' });
+            
             if (!move) {
                 $('.square-55d63').removeClass('highlight-sq');
                 if (game.get(square) && game.get(square).color === 'w') $(this).addClass('highlight-sq');
             } else {
                 $('.square-55d63').removeClass('highlight-sq');
                 board.position(game.fen());
+
+                // Gween Fwog's "New Queen" Cheat
                 if (game.in_checkmate()) { 
-                    speak("You Checkmate me?? I THINK NOT!!!"); 
+                    speak("I lose?? Awww... Well, I THINK NOT!!"); 
+                    
+                    // 1. Get the square where your piece just landed
+                    let landingSquare = move.to;
+
+                    // 2. Undo the move to reset the board state
                     game.undo(); 
-                    game.remove(move.to); // "Cheats" by removing the piece that mated him
-                    board.position(game.fen()); 
+                    
+                    // 3. Remove your piece from its original position (if it's still there) 
+                    // and place a Black Queen on the square you tried to move to
+                    game.remove(move.from); 
+                    game.put({ type: 'q', color: 'b' }, landingSquare);
+                    
+                    board.position(game.fen());
+                    speak("Wibbit! I promoted your piece! Now, I have a queen on " + landingSquare + "!");
                     return; 
                 }
+
                 speak(frogQuotes.thinking[Math.floor(Math.random() * frogQuotes.thinking.length)]);
                 engine.postMessage('position fen ' + game.fen());
                 engine.postMessage('go movetime 500');
