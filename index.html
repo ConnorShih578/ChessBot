@@ -13,6 +13,8 @@
             --accent-blue: #2196F3;
             --accent-yellow: #FFEB3B;
             --accent-green: #4CAF50;
+            --accent-bright-green: #81c714;
+            --accent-purple: #870056;
         }
 
         body {
@@ -47,11 +49,22 @@
             border: 2px solid transparent;
         }
 
-        .bot-card:hover {
+        .bot-card-cooper:hover {
             transform: translateY(-5px);
-            border-color: var(--accent-blue);
+            border-color: var(--accent-yellow);
         }
-
+        .bot-card-turle:hover {
+            transform: translateY(-5px);
+            border-color: var(--accent-green);
+        }
+        .bot-card-martina:hover {
+            transform: translateY(-5px);
+            border-color: var(--accent-purple);
+        }
+        .bot-card-kedin:hover {
+            transform: translateY(-5px);
+            border-color: var(--accent-bright-green);
+        }
         .avatar { font-size: 50px; display: block; margin-bottom: 10px; }
         .tag {
             display: inline-block;
@@ -60,8 +73,6 @@
             font-size: 0.75rem;
             font-weight: bold;
         }
-        .tag-yellow { background: #fbc02d; color: black; }
-        .tag-green { background: #4caf50; color: white; }
     </style>
 </head>
 <body>
@@ -71,23 +82,23 @@
 
     <div class="bot-grid">
         <!-- King Koopa Troopa Card -->
-        <a href="cooper.html" class="bot-card" style="border-color: var(--accent-yellow);">
+        <a href="cooper.html" class="bot-card-cooper" style="border-color: var(--accent-yellow);">
             <span class="avatar">🐢👑</span>
             <div style="font-weight:bold; font-size:1.4rem;">King Koopa Troopa</div>
             <p style="font-size:0.8rem; color:#aaa;">Aggressive gambits and big headaches. 我头痛!</p>
-            <span class="tag tag-yellow">Aggressive</span>
+            <span class="tag">Aggressive</span>
         </a>
 
         <!-- Turtle Card -->
-        <a href="turtle.html" class="bot-card">
+        <a href="turtle.html" class="bot-card-turtle">
             <span class="avatar">🐢</span>
             <div style="font-weight:bold; font-size:1.4rem;">Turtle</div>
             <p style="font-size:0.8rem; color:#aaa;">Just a normal guy playing fair and square.</p>
-            <span class="tag tag-green">1200 ELO</span>
+            <span class="tag">1200 ELO</span>
         </a>
 
         <!-- Martina Card -->
-        <a href="martina.html" class="bot-card">
+        <a href="martina.html" class="bot-card-martina">
             <span class="avatar">👧</span>
             <div style="font-weight:bold; font-size:1.4rem;">Martina</div>
             <p style="font-size:0.8rem; color:#aaa;">Sophisticated and high-level positional play.</p>
@@ -95,7 +106,7 @@
         </a>
 
         <!-- Gween Fwog Card -->
-        <a href="kedin.html" class="bot-card">
+        <a href="kedin.html" class="bot-card-kedin">
             <span class="avatar">🐸</span>
             <div style="font-weight:bold; font-size:1.4rem;">Gween Fwog</div>
             <p style="font-size:0.8rem; color:#aaa;">He might cheat, he might scwipt. Watch out!</p>
