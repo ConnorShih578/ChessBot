@@ -1,137 +1,154 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <title>Chess vs Koopa Troopa</title>
-    <link rel="stylesheet" href="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.css">
-    <style>
-        :root { --bg: #fffde7; --side: #fff9c4; --text: #5f4b00; --yellow: #fbc02d; --orange: #f57f17; }
-        body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', sans-serif; display: flex; flex-direction: column; align-items: center; padding: 20px; }
-        #game-container { display: flex; gap: 20px; width: 100%; max-width: 1000px; height: 600px; margin-top: 15px; }
-        #board { width: 550px; border: 8px solid var(--yellow); border-radius: 12px; }
-        #sidebar { flex: 1; background: var(--side); border-radius: 20px; padding: 20px; display: flex; flex-direction: column; border: 4px solid var(--yellow); }
-        #chat-window { flex: 1; background: white; border-radius: 12px; padding: 15px; overflow-y: auto; margin-bottom: 15px; border: 2px solid var(--yellow); display: flex; flex-direction: column; gap: 8px; }
-        .bubble { background: #fff9c4; padding: 10px; border-radius: 15px; align-self: flex-start; border: 1px solid var(--yellow); }
-        button { padding: 12px; cursor: pointer; background: var(--yellow); border: none; border-radius: 10px; font-weight: bold; box-shadow: 0 3px 0 var(--orange); margin-bottom: 5px; }
-    </style>
+<meta charset="UTF-8">
+<title>Chess vs Koopa Troopa</title>
+
+<link rel="stylesheet" href="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.css">
+
+<style>
+:root { --bg: #fffde7; --side: #fff9c4; --text: #5f4b00; --yellow: #fbc02d; --orange: #f57f17; }
+body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', sans-serif; display: flex; flex-direction: column; align-items: center; padding: 20px; }
+#game-container { display: flex; gap: 20px; width: 100%; max-width: 1000px; height: 600px; margin-top: 15px; }
+#board { width: 550px; border: 8px solid var(--yellow); border-radius: 12px; }
+#sidebar { flex: 1; background: var(--side); border-radius: 20px; padding: 20px; display: flex; flex-direction: column; border: 4px solid var(--yellow); }
+#chat-window { flex: 1; background: white; border-radius: 12px; padding: 15px; overflow-y: auto; margin-bottom: 15px; border: 2px solid var(--yellow); display: flex; flex-direction: column; gap: 8px; }
+.bubble { background: #fff9c4; padding: 10px; border-radius: 15px; border: 1px solid var(--yellow); }
+button { padding: 12px; cursor: pointer; background: var(--yellow); border: none; border-radius: 10px; font-weight: bold; box-shadow: 0 3px 0 var(--orange); }
+.highlight-sq { box-shadow: inset 0 0 3px 3px #fbc02d; }
+</style>
 </head>
+
 <body>
-    <div id="game-container">
-        <div id="board"></div>
-        <div id="sidebar">
-            <div style="display:flex; align-items:center; gap:10px; margin-bottom:15px;">
-                <span style="font-size:2em;">🐢</span>
-                <h3>King Koopa</h3>
-            </div>
-            <div id="chat-window"></div>
-            <button id="undoBtn">Wait! Undo!</button>
-            <button onclick="location.reload()">Rematch!</button>
+
+<div id="game-container">
+    <div id="board"></div>
+
+    <div id="sidebar">
+        <div style="display:flex; align-items:center; gap:10px; margin-bottom:15px;">
+            <span style="font-size:2em;">🐢</span>
+            <h3>King Koopa</h3>
         </div>
+        <div id="chat-window"></div>
+        <button onclick="location.reload()">Rematch!</button>
     </div>
-    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
-    <script src="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>
-    <script>
-        var board = null, game = new Chess(), engine = new Worker('./stockfish-18-lite-single.js'), sourceSquare = null, currentEval = 0.0;
-        engine.postMessage('uci'); engine.postMessage('setoption name UCI_Elo value 1350');
+</div>
 
-        const repertoire = { 
-            "d4": { move: "e5", talk: "Englund Gambit! Prepare to be confused! He he he!" }, 
-            "e4": { move: "c5", talk: "Sicilian! I like this. It’s mischievous. He he he!" } 
-        };
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+<script src="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>
 
-        const quotes = {
-            winning: [
-                "He he he! My shell is too tough for you!", 
-                "Bowser is going to be so proud of me!", 
-                "Are you sure you know how the horsey moves?", 
-                "I'm the king of the board! He he he!",
-                "You're falling for all my tricks!",
-                "He he he! I've got a shell-load of moves left!"
-            ],
-            losing: [
-                "我头痛！ This isn't fair!", 
-                "Stop that! You're making my shell rattle!", 
-                "I'm going to tell Bowser you're mean!", 
-                "Is that move even legal? He he he... no it's not!",
-                "You're a bully! A chess bully!",
-                "I need a bigger shell to hide in after that move!"
-            ],
-            neutral: [
-                "Did you know Napoleon was once attacked by rabbits? He he he!",
-                "I'm not just a shell, I'm a mastermind! He he he!",
-                "Napoleon actually loved chess, but he was kind of bad at it. Just like you!",
-                "All hail King Koopa Troopa!",
-                "I'm thinking... but it's mostly about lettuce. He he he!",
-                "He he he! My favorite piece is the Castle. Get it? Castle?",
-                "Did you know Napoleon's doctor used to play chess with him?"
-            ],
-            victory: [
-                "I WON! I WON! He he he!", 
-                "Next stop: Mushroom Kingdom Championship!", 
-                "You got Koopa'd!",
-                "Bowser! I did it! I beat the human! He he he!"
-            ]
-        };
+<script>
+var board = null,
+    game = new Chess(),
+    engine = new Worker('https://cdn.jsdelivr.net/npm/stockfish/stockfish.js'),
+    sourceSquare = null,
+    currentEval = 0,
+    lastEval = 0;
 
-        function speak(text) {
-            $('#chat-window').append(`<div class="bubble">${text}</div>`);
-            $('#chat-window').scrollTop($('#chat-window')[0].scrollHeight);
+engine.postMessage('uci');
+engine.postMessage('setoption name UCI_Elo value 1350');
+
+const quotes = {
+    winning: ["He he he! My shell is too tough for you!", "All my Koopas are going to be so proud of me!", "Are you sure you know how the horsey moves?", "I'm the king of the board! He he he!"],
+    losing: ["我头痛！ This isn't fair!", "Stop that! You're making my shell rattle!", "I'm going to tell Bowser you're mean!", "Is that move even legal? He he he... no it's not!"],
+    neutral: [
+        "Did you know Napoleon was once attacked by rabbits? He he he!",
+        "I'm not just a shell, I'm a mastermind! He he he!",
+        "Napoleon actually loved chess, but he was kind of bad at it. Just like you!",
+        "All hail King Koopa Troopa!",
+        "I'm thinking... but it's mostly about lettuce. He he he!",
+        "Did you know that Napoleon wore a necklace with a vial of poison attched in case he got captured?"
+    ],
+    victory: ["I WON! I WON! He he he!", "Next stop: Timchess.netlify.app!", "You got Koopa'd!"]
+};
+
+function speak(text) {
+    const chat = $('#chat-window');
+    chat.append(`<div class="bubble">${text}</div>`);
+    setTimeout(() => {
+        chat.scrollTop(chat[0].scrollHeight);
+    }, 0);
+}
+
+function onSquareClick() {
+    var square = $(this).attr('data-square');
+    if (game.game_over()) return;
+
+    if (sourceSquare === null) {
+        var piece = game.get(square);
+        if (piece && piece.color === 'w') {
+            sourceSquare = square;
+            $('.square-55d63').removeClass('highlight-sq');
+            $('.square-' + square).addClass('highlight-sq');
         }
+    } else {
+        var move = game.move({ from: sourceSquare, to: square, promotion: 'q' });
+        $('.square-55d63').removeClass('highlight-sq');
 
-        function onSquareClick() {
-            var square = $(this).attr('data-square');
-            if (game.game_over()) return;
-            if (sourceSquare === null) {
-                var piece = game.get(square);
-                if (piece && piece.color === game.turn()) {
-                    sourceSquare = square;
-                    $('.square-55d63').removeClass('highlight-sq').addClass('highlight-sq');
-                }
-            } else {
-                var move = game.move({ from: sourceSquare, to: square, promotion: 'q' });
-                $('.square-55d63').removeClass('highlight-sq');
-                if (move) {
-                    board.position(game.fen());
-                    const history = game.history().join(' ');
-                    if (repertoire[history]) {
-                        setTimeout(() => {
-                            let m = game.move(repertoire[history].move);
-                            board.position(game.fen());
-                            speak(repertoire[history].talk);
-                        }, 500);
-                    } else {
-                        engine.postMessage('position fen ' + game.fen());
-                        engine.postMessage('go movetime 1000');
-                    }
-                }
-                sourceSquare = null;
-            }
+        if (move) {
+            board.position(game.fen());
+            engine.postMessage('position fen ' + game.fen());
+            engine.postMessage('go movetime 800');
         }
+        sourceSquare = null;
+    }
+}
 
-        engine.onmessage = function(e) {
-            if (e.data.includes('score cp')) currentEval = (game.turn() === 'b' ? parseInt(e.data.split('cp ')[1]) : -parseInt(e.data.split('cp ')[1])) / 100;
-            if (e.data.startsWith('bestmove')) {
-                var m = e.data.split(' ')[1];
-                game.move({ from: m.substring(0, 2), to: m.substring(2, 4), promotion: 'q' });
-                board.position(game.fen());
-                let cat = 'neutral';
-                if (currentEval < -1.5) cat = 'winning';
-                else if (currentEval > 1.5) cat = 'losing';
-                speak(game.in_checkmate() ? quotes.victory[Math.floor(Math.random() * quotes.victory.length)] : quotes[cat][Math.floor(Math.random() * quotes[cat].length)]);
-            }
-        };
+engine.onmessage = function(e) {
+    let line = e.data;
 
-        $('#undoBtn').on('click', function() {
-            game.undo(); game.undo(); board.position(game.fen());
-            speak("Wait, you're taking it back? 我头痛！");
-        });
+    // ✅ FIXED eval parsing
+    if (line.includes('score cp')) {
+        let match = line.match(/score cp (-?\d+)/);
+        if (match) {
+            let score = parseInt(match[1]);
+            currentEval = (game.turn() === 'b' ? score : -score) / 100;
+        }
+    }
 
-        $(document).ready(function() {
-            board = Chessboard('board', { position: 'start', draggable: false, pieceTheme: 'https://chessboardjs.com/img/chesspieces/wikipedia/{piece}.png' });
-            $(document).on('click', '.square-55d63', onSquareClick);
-            speak("He he he! King Koopa Troopa is in the building!");
-        });
-    </script>
+    if (line.startsWith('bestmove')) {
+        let m = line.split(' ')[1];
+        if (!m || m === '(none)') return;
+
+        game.move({ from: m.substring(0, 2), to: m.substring(2, 4), promotion: 'q' });
+        board.position(game.fen());
+
+        // ✅ FIXED timing (THIS is the key)
+        setTimeout(() => {
+            let cat = 'neutral';
+
+            if (currentEval < -1.5) cat = 'winning';
+            else if (currentEval > 1.5) cat = 'losing';
+
+            // slight dynamic improvement (still uses your lines)
+            let delta = currentEval - lastEval;
+            if (delta < -2) cat = 'winning';
+            else if (delta > 2) cat = 'losing';
+
+            lastEval = currentEval;
+
+            speak(
+                game.in_checkmate()
+                    ? quotes.victory[0]
+                    : quotes[cat][Math.floor(Math.random() * quotes[cat].length)]
+            );
+        }, 150);
+    }
+};
+
+$(document).ready(function() {
+    board = Chessboard('board', {
+        position: 'start',
+        draggable: false,
+        pieceTheme: 'https://chessboardjs.com/img/chesspieces/wikipedia/{piece}.png'
+    });
+
+    $(document).on('click', '.square-55d63', onSquareClick);
+
+    speak("He he he! King Koopa Troopa is in the building!");
+});
+</script>
+
 </body>
 </html>
