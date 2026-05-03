@@ -12,7 +12,7 @@
         #sidebar { flex: 1; background: var(--side); border-radius: 20px; padding: 20px; display: flex; flex-direction: column; border: 4px solid var(--yellow); }
         #chat-window { flex: 1; background: white; border-radius: 12px; padding: 15px; overflow-y: auto; margin-bottom: 15px; border: 2px solid var(--yellow); display: flex; flex-direction: column; gap: 8px; }
         .bubble { background: #fff9c4; padding: 10px; border-radius: 15px; align-self: flex-start; border: 1px solid var(--yellow); }
-        button { padding: 12px; cursor: pointer; background: var(--yellow); border: none; border-radius: 10px; font-weight: bold; box-shadow: 0 3px 0 var(--orange); }
+        button { padding: 12px; cursor: pointer; background: var(--yellow); border: none; border-radius: 10px; font-weight: bold; box-shadow: 0 3px 0 var(--orange); margin-bottom: 5px; }
     </style>
 </head>
 <body>
@@ -24,6 +24,7 @@
                 <h3>King Koopa</h3>
             </div>
             <div id="chat-window"></div>
+            <button id="undoBtn">Wait! Undo!</button>
             <button onclick="location.reload()">Rematch!</button>
         </div>
     </div>
@@ -34,18 +35,43 @@
         var board = null, game = new Chess(), engine = new Worker('./stockfish-18-lite-single.js'), sourceSquare = null, currentEval = 0.0;
         engine.postMessage('uci'); engine.postMessage('setoption name UCI_Elo value 1350');
 
+        const repertoire = { 
+            "d4": { move: "e5", talk: "Englund Gambit! Prepare to be confused! He he he!" }, 
+            "e4": { move: "c5", talk: "Sicilian! I like this. It’s mischievous. He he he!" } 
+        };
+
         const quotes = {
-            winning: ["He he he! My shell is too tough for you!", "All my Koopas are going to be so proud of me!", "Are you sure you know how the horsey moves?", "I'm the king of the board! He he he!"],
-            losing: ["我头痛！ This isn't fair!", "Stop that! You're making my shell rattle!", "I'm going to tell Bowser you're mean!", "Is that move even legal? He he he... no it's not!"],
+            winning: [
+                "He he he! My shell is too tough for you!", 
+                "Bowser is going to be so proud of me!", 
+                "Are you sure you know how the horsey moves?", 
+                "I'm the king of the board! He he he!",
+                "You're falling for all my tricks!",
+                "He he he! I've got a shell-load of moves left!"
+            ],
+            losing: [
+                "我头痛！ This isn't fair!", 
+                "Stop that! You're making my shell rattle!", 
+                "I'm going to tell Bowser you're mean!", 
+                "Is that move even legal? He he he... no it's not!",
+                "You're a bully! A chess bully!",
+                "I need a bigger shell to hide in after that move!"
+            ],
             neutral: [
                 "Did you know Napoleon was once attacked by rabbits? He he he!",
                 "I'm not just a shell, I'm a mastermind! He he he!",
                 "Napoleon actually loved chess, but he was kind of bad at it. Just like you!",
                 "All hail King Koopa Troopa!",
                 "I'm thinking... but it's mostly about lettuce. He he he!",
-                "Did you know that Napoleon wore a necklace with a vial of poison attched in case he got captured?"
+                "He he he! My favorite piece is the Castle. Get it? Castle?",
+                "Did you know Napoleon's doctor used to play chess with him?"
             ],
-            victory: ["I WON! I WON! He he he!", "Next stop: Timchess.netlify.app!", "You got Koopa'd!"]
+            victory: [
+                "I WON! I WON! He he he!", 
+                "Next stop: Mushroom Kingdom Championship!", 
+                "You got Koopa'd!",
+                "Bowser! I did it! I beat the human! He he he!"
+            ]
         };
 
         function speak(text) {
@@ -60,16 +86,24 @@
                 var piece = game.get(square);
                 if (piece && piece.color === game.turn()) {
                     sourceSquare = square;
-                    $('.square-55d63').removeClass('highlight-sq');
-                    $('.square-' + square).addClass('highlight-sq');
+                    $('.square-55d63').removeClass('highlight-sq').addClass('highlight-sq');
                 }
             } else {
                 var move = game.move({ from: sourceSquare, to: square, promotion: 'q' });
                 $('.square-55d63').removeClass('highlight-sq');
                 if (move) {
                     board.position(game.fen());
-                    engine.postMessage('position fen ' + game.fen());
-                    engine.postMessage('go movetime 800');
+                    const history = game.history().join(' ');
+                    if (repertoire[history]) {
+                        setTimeout(() => {
+                            let m = game.move(repertoire[history].move);
+                            board.position(game.fen());
+                            speak(repertoire[history].talk);
+                        }, 500);
+                    } else {
+                        engine.postMessage('position fen ' + game.fen());
+                        engine.postMessage('go movetime 1000');
+                    }
                 }
                 sourceSquare = null;
             }
@@ -84,9 +118,14 @@
                 let cat = 'neutral';
                 if (currentEval < -1.5) cat = 'winning';
                 else if (currentEval > 1.5) cat = 'losing';
-                speak(game.in_checkmate() ? quotes.victory[0] : quotes[cat][Math.floor(Math.random() * quotes[cat].length)]);
+                speak(game.in_checkmate() ? quotes.victory[Math.floor(Math.random() * quotes.victory.length)] : quotes[cat][Math.floor(Math.random() * quotes[cat].length)]);
             }
         };
+
+        $('#undoBtn').on('click', function() {
+            game.undo(); game.undo(); board.position(game.fen());
+            speak("Wait, you're taking it back? 我头痛！");
+        });
 
         $(document).ready(function() {
             board = Chessboard('board', { position: 'start', draggable: false, pieceTheme: 'https://chessboardjs.com/img/chesspieces/wikipedia/{piece}.png' });
