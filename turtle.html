@@ -114,6 +114,7 @@
         engine.postMessage('uci');
         engine.postMessage('setoption name UCI_LimitStrength value true');
         engine.postMessage('setoption name UCI_Elo value 1350');
+        engine.postMessage('setoption name Contempt value 100'); 
         engine.postMessage('setoption name Threads value 1');
 
         const pools = {
@@ -121,7 +122,7 @@
             losing: ["*turtle noises* (nervous)", "I have pwentty of time... I think.", "Do you like my gween shell?", "eating nois (slowly)", "I wonder why my shell looks different...", "Oh, no! My shell is cracking!"],
             neutral: ["Hi, I’m Gween Turtle", "*turtle noises*", "eating nois", "Do you like my gween shell?", "I look better than King Koopa, right? My shell is more GWEEN."],
             gameWin: ["You suffered from Turtle! eating nois (happy)", "My shell is too strong! 我是更好!", "Turtle wins the race! *happy turtle noises*"],
-            gameLoss: ["My shell... it broke. *sad turtle noises*", "I ran out of time? But turtles live forever...", "I will go back in my shell now. eating nois (sad)"],
+            gameLoss: ["My shell... it's in pieces. *sad turtle noises*", "I ran out of time? But turtles live forever...", "I will go back in my shell now. eating nois (sad)"],
             gameDraw: ["We are both turtles today. *turtle noises*", "A draw? eating nois (confused)", "My shell and your shell are the same."]
         };
 
@@ -133,21 +134,20 @@
 
         function getCommentary() {
             let pool = pools.neutral;
-            if (currentEval > 1.5) pool = pools.winning;
-            if (currentEval < -1.5) pool = pools.losing;
+            if (currentEval > 0.7) pool = pools.winning;
+            else if (currentEval < -0.7) pool = pools.losing;
             return pool[Math.floor(Math.random() * pool.length)];
         }
 
         function checkGameOver() {
             if (game.game_over()) {
                 if (game.in_checkmate()) {
-                    // If it's currently the bot's turn and it's in checkmate, the bot lost.
                     if (game.turn() === 'b') {
                         speak(pools.gameLoss[Math.floor(Math.random() * pools.gameLoss.length)]);
                     } else {
                         speak(pools.gameWin[Math.floor(Math.random() * pools.gameWin.length)]);
                     }
-                } else if (game.in_draw() || game.in_stalemate() || game.in_threefold_repetition()) {
+                } else {
                     speak(pools.gameDraw[Math.floor(Math.random() * pools.gameDraw.length)]);
                 }
                 return true;
@@ -185,9 +185,16 @@
         }
 
         engine.onmessage = function(e) {
-            if (e.data.includes('score cp')) {
-                let cp = parseInt(e.data.split('cp ')[1].split(' ')[0]);
-                currentEval = (game.turn() === 'b' ? cp : -cp) / 100;
+            if (e.data.includes('score ')) {
+                const scoreParts = e.data.split('score ')[1].split(' ');
+                const scoreType = scoreParts[0]; 
+                const scoreValue = parseInt(scoreParts[1]);
+
+                if (scoreType === 'cp') {
+                    currentEval = scoreValue / 100;
+                } else if (scoreType === 'mate') {
+                    currentEval = scoreValue > 0 ? 99 : -99;
+                }
             }
 
             if (e.data.startsWith('bestmove')) {
@@ -207,7 +214,9 @@
             game.undo(); game.undo(); 
             board.position(game.fen());
             $('.square-55d63').removeClass('highlight-last');
-            speak("Fine, take it back. I have pwentty of time.");
+            $('.square-55d63').removeClass('highlight-sq');
+            sourceSquare = null;
+            speak("I have pwentty of time... take it back.");
         });
 
         $(document).ready(function() {
