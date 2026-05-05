@@ -18,7 +18,7 @@
         button { padding: 12px; cursor: pointer; background: var(--accent); color: white; border: none; border-radius: 4px; font-weight: bold; text-transform: uppercase; width: 100%; }
         #eval-status { color: var(--accent); font-size: 0.75em; margin-top: 10px; letter-spacing: 1px; }
         .nav-link { text-decoration: none; color: var(--terminal); font-weight: bold; margin-bottom: 10px; }
-        #highlight-sq {color: #8b008b;}
+        .highlight-sq {inset: 2px; color: #8b008b;}
     </style>
 </head>
 <body>
@@ -123,7 +123,7 @@
                     $('.square-'+move.from+', .square-'+move.to).addClass('highlight-last');
                     speak(martinaQuotes.thinking[Math.floor(Math.random() * martinaQuotes.thinking.length)]);
                     engine.postMessage('position fen ' + game.fen());
-                    engine.postMessage('go depth 18');
+                    engine.postMessage('go depth 20');
                 }
                 sourceSquare = null;
             }
