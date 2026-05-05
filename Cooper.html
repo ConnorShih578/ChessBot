@@ -35,7 +35,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>
     <script>
         var board = null, game = new Chess(), engine = new Worker('./stockfish-18-lite-single.js'), sourceSquare = null, currentEval = 0.0;
-        engine.postMessage('uci'); engine.postMessage('setoption name UCI_Elo value 1350');
+        engine.postMessage('uci'); engine.postMessage('setoption name UCI_Elo value 1400');
 
         const quotes = {
             winning: ["He he he! My shell is too tough for you!", "All my Koopas are going to be so proud of me!", "Are you sure you know how the horsey moves?", "I'm the king of the board! He he he!"],
