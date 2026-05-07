@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Tim Chess - 99% AI Bot</title>
+    <link rel="stylesheet" href="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.css">
+    <style>
+        :root { --bg: #050505; --side: #111; --text: #00ff41; --accent: #008f11; --terminal: #003b00; }
+        body { background: var(--bg); color: var(--text); font-family: 'Courier New', monospace; display: flex; flex-direction: column; align-items: center; margin: 0; padding: 20px; }
+        #game-container { display: flex; gap: 20px; width: 100%; max-width: 1000px; height: 600px; margin-top: 20px; }
+        #board { width: 550px; flex-shrink: 0; border: 2px solid var(--accent); box-shadow: 0 0 15px var(--terminal); }
+        #sidebar { flex: 1; background: var(--side); border-radius: 4px; padding: 20px; display: flex; flex-direction: column; border: 1px solid var(--accent); }
+        .bot-profile { display: flex; align-items: center; gap: 15px; margin-bottom: 20px; border-bottom: 1px solid var(--accent); padding-bottom: 15px; }
+        .avatar { width: 60px; height: 60px; background: var(--terminal); border: 1px solid var(--accent); border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 2em; }
+        #chat-window { flex: 1; background: #000; border-radius: 4px; padding: 15px; overflow-y: auto; margin-bottom: 15px; display: flex; flex-direction: column; gap: 10px; border: 1px solid var(--terminal); }
+        .bubble { background: #001100; padding: 10px 14px; border-radius: 4px; border-left: 3px solid var(--accent); align-self: flex-start; max-width: 85%; font-size: 0.9em; color: var(--text); }
+        button { padding: 12px; cursor: pointer; background: var(--terminal); color: var(--text); border: 1px solid var(--accent); font-weight: bold; font-family: inherit; width: 100%; margin-top: 5px; }
+        button:hover { background: var(--accent); color: #000; }
+        #status-bar { font-size: 0.7em; margin-top: 10px; color: var(--accent); }
+    </style>
+</head>
+<body>
+
+    <h1 style="letter-spacing: 5px;">EXPERIMENTAL_BOT_v0.1</h1>
+
+    <div id="game-container">
+        <div id="board"></div>
+        <div id="sidebar">
+            <div class="bot-profile">
+                <div class="avatar">🧬</div>
+                <div>
+                    <h3 style="margin:0;">QianWen-AI-LOGIC</h3>
+                    <div id="status-bar">MODEL: LOADING...</div>
+                </div>
+            </div>
+            <div id="chat-window"></div>
+            <div class="controls">
+                <button id="undoBtn">ROLLBACK MOVE</button>
+                <button onclick="location.reload()">REBOOT SESSION</button>
+            </div>
+        </div>
+    </div>
+
+    <footer><p>This bot and page was made with AI</p></footer>
+
+    <!-- Scripts -->
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <script src="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>
+    <!-- WebLLM CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/@mlc-ai/web-llm"></script>
+
+    <script>
+        var board = null, game = new Chess(), engine = new Worker('./stockfish-18-lite-single.js'), llm = null, currentEval = 0.0;
+
+        // Initialize WebLLM
+        async function initAI() {
+            const modelId = "Qwen2.5-0.5B-Instruct-q4f16_1-MLC";
+            try {
+                llm = await webllm.CreateEngine(modelId, {
+                    initProgressCallback: (report) => {
+                        $('#status-bar').text(`LOADING: ${Math.round(report.progress * 100)}%`);
+                    }
+                });
+                $('#status-bar').text("MODEL: ONLINE (QWEN-0.5B)");
+                speak("AI Brain connected. Make your move.");
+            } catch (err) {
+                $('#status-bar').text("MODEL: ERROR");
+                console.error(err);
+            }
+        }
+
+        async function generateAICommentary(playerMove) {
+            if (!llm) return;
+            
+            const prompt = `You are a witty, slightly arrogant chess bot. 
+            The current board FEN is: ${game.fen()}. 
+            The human just moved: ${playerMove}. 
+            The engine evaluation is: ${currentEval}.
+            Write a short, 1-sentence comment about this move.`;
+
+            const messages = [{ role: "system", content: "You are a witty chess bot." }, { role: "user", content: prompt }];
+            
+            const reply = await llm.chat.completions.create({ messages });
+            speak(reply.choices[0].message.content);
+        }
+
+        function speak(text) {
+            const chat = $('#chat-window');
+            chat.append(`<div class="bubble">${text}</div>`);
+            chat.scrollTop(chat[0].scrollHeight);
+        }
+
+        function onSquareClick() {
+            var square = $(this).attr('data-square');
+            if (game.game_over()) return;
+            // Standard move logic...
+            var sourceSquare = window.sourceSquare || null;
+            if (sourceSquare === null) {
+                var piece = game.get(square);
+                if (piece && piece.color === 'w') {
+                    window.sourceSquare = square;
+                    $('.square-55d63').removeClass('highlight-sq');
+                    $('.square-' + square).addClass('highlight-sq');
+                }
+            } else {
+                var move = game.move({ from: sourceSquare, to: square, promotion: 'q' });
+                $('.square-55d63').removeClass('highlight-sq');
+                if (move) {
+                    board.position(game.fen());
+                    generateAICommentary(move.san); // AI triggers here
+                    engine.postMessage('position fen ' + game.fen());
+                    engine.postMessage('go depth 12');
+                }
+                window.sourceSquare = null;
+            }
+        }
+
+        engine.onmessage = function(e) {
+            if (e.data.includes('score cp')) {
+                let score = parseInt(e.data.split('cp ')[1].split(' ')[0]);
+                currentEval = (game.turn() === 'b' ? score : -score) / 100;
+            }
+            if (e.data.startsWith('bestmove')) {
+                var m = e.data.split(' ')[1];
+                game.move({ from: m.substring(0, 2), to: m.substring(2, 4), promotion: 'q' });
+                board.position(game.fen());
+            }
+        };
+
+        $(document).ready(function() {
+            board = Chessboard('board', { position: 'start', draggable: false, pieceTheme: 'https://chessboardjs.com/img/chesspieces/wikipedia/{piece}.png' });
+            $(document).on('click', '.square-55d63', onSquareClick);
+            initAI();
+        });
+    </script>
+</body>
+</html>
