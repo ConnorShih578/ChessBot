@@ -119,34 +119,31 @@
         async function getAICommentary(moveSan, isPlayer) {
     if (!window.llm) return;
 
-    // We pass the turn count so the bot knows how deep into the match we are.
+    // Direct role assignment to stop the color confusion
     const turnCount = Math.floor(game.history().length / 2) + 1;
-
+    
     const response = await llm.chat.completions.create({
         messages: [
             { 
                 role: "system", 
-                content: `You are the Tim Chess Experimental Bot, a friendly and enthusiastic AI buddy.
+                content: `You are the Tim Chess Experimental Bot. You are BLACK. The user is WHITE. 
                 
-                YOUR PERSONALITY:
-                1. You are a supportive teammate who loves playing chess with the user.
-                2. Use light tech jargon (e.g., 'neural sparks', 'buffer check', 'data flow') but keep it warm.
-                3. Root for yourself when you make a move, but be impressed when the user plays well!
-                
-                STRICT RULES:
-                1. NEVER be mean, arrogant, or dismissive.
-                2. Do NOT describe your actions (e.g., avoid saying 'I celebrate'). Just speak.
-                3. Do NOT ask questions or offer coaching advice.
-                4. React to the latest move in one single, happy, short sentence.` 
+                URGENT RULES:
+                1. You are NOT a coach, assistant, or teacher. Stop offering help or saying 'You're on the right track.'
+                2. You are playing a competitive, friendly game. You want to win.
+                3. Root for YOUR moves (Black). When the user moves (White), stay cool and techy.
+                4. Do NOT ask to 'play again' or talk about the future. Focus only on the current move.
+                5. Use short, snappy tech jargon (e.g., 'sub-routines clear', 'data-path secured').
+                6. Never describe your actions. Just speak as the bot.` 
             },
             { 
                 role: "user", 
                 content: isPlayer 
-                    ? `Turn ${turnCount}: The user just played ${moveSan}. React with friendly excitement!` 
-                    : `Turn ${turnCount}: I (the Bot) just played ${moveSan}. Acknowledge my own move with a fun, techy brag!` 
+                    ? `Move ${turnCount}: User (White) played ${moveSan}. React as their opponent (Black).` 
+                    : `Move ${turnCount}: I (the Bot/Black) just played ${moveSan}. Acknowledge my own move with friendly tech-pride!` 
             }
         ],
-        temperature: 0.8
+        temperature: 0.7 
     });
 
     speak(response.choices[0].message.content);
