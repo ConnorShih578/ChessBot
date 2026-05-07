@@ -3,7 +3,6 @@
 <head>
     <meta charset="UTF-8">
     <title>Tim Chess - Experimental Bot</title>
-    <!-- CSS Dependencies -->
     <link rel="stylesheet" href="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.css">
     <style>
         :root {
@@ -54,7 +53,7 @@
         </div>
     </div>
 
-    <footer>This bot and page was made with AI. Powered by WebLLM, Stockfish 18, QianWen AI, and WebGPU.</footer>
+    <footer>The UI and styling was made with AI. Powered by WebLLM, Stockfish 18, QianWen AI, and WebGPU.</footer>
 
     <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
     <script src="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.js"></script>
@@ -67,9 +66,12 @@
         var game = new Chess();
         var llm = null;
         
-        // Stockfish Worker Setup
+        // --- STOCKFISH SETUP ---
         var engine = new Worker('https://cdn.jsdelivr.net/npm/stockfish/src/stockfish.js');
+        
+        // Standard Stockfish Handshake
         engine.postMessage('uci');
+        engine.postMessage('ucinewgame');
         engine.postMessage('isready');
 
         async function initAI() {
@@ -83,11 +85,10 @@
                 
                 $('#status-bar').text("SYSTEM: ONLINE");
                 
-                // Greeting Prompt: Identify as Tim Chess Bot powered by QianWen
                 const greeting = await llm.chat.completions.create({
                     messages: [
-                        { role: "system", content: "You are the experimental bot for Tim Chess. You are powered by the QianWen (Qwen) AI model via WebLLM. You are a polite, expert chess mentor. Introduce yourself by name and mention that you are running locally in the browser thanks to QianWen and WebGPU." },
-                        { role: "user", content: "Introduce yourself." }
+                        { role: "system", content: "You are the experimental bot for Tim Chess. You are powered by the QianWen AI model. You are polite and helpful. Do not talk about moves yet." },
+                        { role: "user", content: "Hi, I'm the experimental bot for Tim Chess. I am powered by QianWen. Introduce yourself briefly." }
                     ]
                 });
                 speak(greeting.choices[0].message.content);
@@ -103,38 +104,42 @@
             $('#chat-window').scrollTop($('#chat-window')[0].scrollHeight);
         }
 
-        async function getAICommentary(move) {
+        async function getAICommentary(moveSan) {
             if (!llm) return;
             const response = await llm.chat.completions.create({
                 messages: [
-                    { role: "system", content: "You are the experimental bot for Tim Chess, powered by QianWen. Comment briefly on the move I just made. Always remain in character as the Tim Chess Bot." },
-                    { role: "user", content: `I just moved ${move}. The current FEN is ${game.fen()}.` }
+                    { role: "system", content: "You are the experimental bot for Tim Chess, powered by QianWen. The user has made a move. Give a one-sentence reaction. Do not ask questions." },
+                    { role: "user", content: `I played ${moveSan}. FEN: ${game.fen()}` }
                 ]
             });
             speak(response.choices[0].message.content);
         }
 
         function onDrop(source, target) {
+            // Check if move is legal
             var move = game.move({ from: source, to: target, promotion: 'q' });
-            
             if (move === null) return 'snapback';
 
-            $('#status-bar').text("SYSTEM: PROCESSING...");
+            $('#status-bar').text("SYSTEM: STOCKFISH THINKING...");
             
-            // Fix: Standard handshake to ensure Stockfish responds
-            engine.postMessage('ucinewgame');
+            // Send move to Stockfish
             engine.postMessage('position fen ' + game.fen());
             engine.postMessage('go depth 12');
             
+            // Get AI response
             getAICommentary(move.san);
         }
 
+        // --- ENGINE RESPONSE HANDLING ---
         engine.onmessage = function(e) {
+            // Look for the bestmove command from Stockfish
             if (e.data.startsWith('bestmove')) {
                 var moveStr = e.data.split(' ')[1];
-                game.move({ from: moveStr.substring(0, 2), to: moveStr.substring(2, 4), promotion: 'q' });
-                board.position(game.fen());
-                $('#status-bar').text("SYSTEM: AWAITING INPUT");
+                if (moveStr && moveStr !== '(none)') {
+                    game.move({ from: moveStr.substring(0, 2), to: moveStr.substring(2, 4), promotion: 'q' });
+                    board.position(game.fen());
+                    $('#status-bar').text("SYSTEM: YOUR TURN");
+                }
             }
         };
 
