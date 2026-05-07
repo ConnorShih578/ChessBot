@@ -69,8 +69,10 @@
         // --- STOCKFISH SETUP ---
         var engine = new Worker('https://cdn.jsdelivr.net/npm/stockfish/src/stockfish.js');
         
-        // Standard Stockfish Handshake
+        // Initialize with UCI Elo Limits per Project "Tim Chess" specs
         engine.postMessage('uci');
+        engine.postMessage('setoption name UCI_LimitStrength value true');
+        engine.postMessage('setoption name UCI_Elo value 1500'); 
         engine.postMessage('ucinewgame');
         engine.postMessage('isready');
 
@@ -108,31 +110,34 @@
             if (!llm) return;
             const response = await llm.chat.completions.create({
                 messages: [
-                    { role: "system", content: "You are the experimental bot for Tim Chess, powered by QianWen. The user has made a move. Give a one-sentence reaction. Do not ask questions." },
-                    { role: "user", content: `I played ${moveSan}. FEN: ${game.fen()}` }
+                    { role: "system", content: "You are the experimental bot for Tim Chess. The user just made a move. Give a one-sentence reaction to the player's move. Do not claim you made the move." },
+                    { role: "user", content: `The player just moved ${moveSan}. Current FEN: ${game.fen()}` }
                 ]
             });
             speak(response.choices[0].message.content);
         }
 
         function onDrop(source, target) {
-            // Check if move is legal
             var move = game.move({ from: source, to: target, promotion: 'q' });
             if (move === null) return 'snapback';
 
             $('#status-bar').text("SYSTEM: STOCKFISH THINKING...");
             
-            // Send move to Stockfish
+            // Explicitly sync the board and then trigger the engine
+            board.position(game.fen());
             engine.postMessage('position fen ' + game.fen());
             engine.postMessage('go depth 12');
             
-            // Get AI response
             getAICommentary(move.san);
         }
 
         // --- ENGINE RESPONSE HANDLING ---
         engine.onmessage = function(e) {
-            // Look for the bestmove command from Stockfish
+            // Ensure the engine is ready before starting
+            if (e.data === 'readyok') {
+                $('#status-bar').text("SYSTEM: ENGINE READY");
+            }
+
             if (e.data.startsWith('bestmove')) {
                 var moveStr = e.data.split(' ')[1];
                 if (moveStr && moveStr !== '(none)') {
