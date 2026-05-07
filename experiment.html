@@ -5,28 +5,32 @@
     <title>Tim Chess Experimental Bot</title>
     <link rel="stylesheet" href="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.css">
     <style>
-        :root { --bg: #0a0a0a; --text: #00ff41; --accent: #008f11; }
-        body { background: var(--bg); color: var(--text); font-family: 'Courier New', monospace; display: flex; flex-direction: column; align-items: center; padding: 10px; margin: 0; }
-        #game-container { display: flex; flex-wrap: wrap; justify-content: center; gap: 15px; width: 100%; max-width: 900px; }
-        #board { width: 400px; border: 2px solid var(--accent); }
-        #sidebar { width: 350px; height: 400px; background: #111; padding: 15px; display: flex; flex-direction: column; border: 1px solid var(--accent); box-sizing: border-box; }
-        #chat-window { flex: 1; background: #000; padding: 10px; overflow-y: auto; border: 1px solid #222; font-size: 0.85em; margin-bottom: 10px; }
-        .bubble { margin-bottom: 8px; border-left: 2px solid var(--accent); padding-left: 8px; color: #00ff41; }
-        #status { font-size: 0.7em; color: var(--accent); margin-bottom: 5px; height: 15px; }
-        button { padding: 8px; cursor: pointer; background: #002200; color: var(--text); border: 1px solid var(--accent); font-family: inherit; font-size: 0.8em; }
+        :root { --bg: #0a0a0a; --text: #00ff41; --accent: #008f11; --terminal: #002200; }
+        body { background: var(--bg); color: var(--text); font-family: 'Courier New', monospace; display: flex; flex-direction: column; align-items: center; padding: 20px; margin: 0; }
+        #game-container { display: flex; flex-wrap: wrap; justify-content: center; gap: 20px; width: 100%; max-width: 1000px; }
+        #board { width: 450px; border: 3px solid var(--accent); box-shadow: 0 0 20px var(--terminal); }
+        #sidebar { width: 380px; height: 450px; background: #111; padding: 20px; display: flex; flex-direction: column; border: 1px solid var(--accent); box-sizing: border-box; }
+        #chat-window { flex: 1; background: #000; padding: 12px; overflow-y: auto; border: 1px solid #222; font-size: 0.9em; margin-bottom: 15px; }
+        .bubble { margin-bottom: 10px; border-left: 2px solid var(--accent); padding-left: 10px; line-height: 1.4; }
+        #status { font-size: 0.75em; color: var(--accent); margin-bottom: 8px; text-transform: uppercase; letter-spacing: 1px; }
+        .controls { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        button { padding: 10px; cursor: pointer; background: var(--terminal); color: var(--text); border: 1px solid var(--accent); font-family: inherit; transition: 0.2s; }
+        button:hover { background: var(--accent); color: #000; }
         .highlight-last { background-color: rgba(0, 143, 17, 0.4) !important; }
     </style>
 </head>
 <body>
 
-    <h2 style="margin: 10px 0;">TIM_CHESS_v2.0_SMOL</h2>
+    <h1 style="margin-bottom: 20px;">TIM_CHESS_EXPERIMENTAL_v3</h1>
 
     <div id="game-container">
         <div id="board"></div>
         <div id="sidebar">
-            <div id="status">INITIALIZING...</div>
-            <div id="chat-window"><div class="bubble">> STANDBY for neural link...</div></div>
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 5px;">
+            <div id="status">INITIALIZING_SYSTEM...</div>
+            <div id="chat-window">
+                <div class="bubble">> NEURAL LINK STANDBY.</div>
+            </div>
+            <div class="controls">
                 <button id="undoBtn">UNDO_MOVE</button>
                 <button onclick="location.reload()">REBOOT_SYS</button>
             </div>
@@ -44,79 +48,109 @@
         let board = null;
         let llm = null;
         let isThinking = false;
-        let history = [];
+        let chatHistory = [];
 
-        // Engine setup
+        // 1. Initialize Stockfish Engine
         const sf = new Worker('./stockfish-18-lite-single.js');
         sf.postMessage('uci');
-        sf.postMessage('setoption name UCI_Elo value 1400');
+        sf.postMessage('setoption name UCI_Elo value 1500');
 
         sf.onmessage = (e) => {
             if (e.data.startsWith('bestmove')) {
-                const m = e.data.split(' ')[1];
-                const move = game.move({ from: m.slice(0, 2), to: m.slice(2, 4), promotion: 'q' });
-                board.position(game.fen());
-                highlight(move);
-                getCommentary(move, false);
-                $('#status').text("YOUR TURN");
+                const moveStr = e.data.split(' ')[1];
+                if (moveStr && moveStr !== '(none)') {
+                    const move = game.move({ from: moveStr.slice(0, 2), to: moveStr.slice(2, 4), promotion: 'q' });
+                    board.position(game.fen());
+                    updateHighlight(move);
+                    getAIResponse(move, false);
+                    $('#status').text("SYSTEM: YOUR TURN");
+                }
             }
         };
 
-        async function init() {
+        // 2. Initialize Lightweight LLM (SmolLM2-360M)
+        async function initAI() {
             try {
-                // Best model for 4GB RAM devices
-                const model = "SmolLM2-360M-Instruct-q4f16_1-MLC";
-                llm = await webllm.CreateMLCEngine(model, {
+                // This model uses ~130MB - 350MB RAM, perfect for 4GB devices
+                const modelId = "SmolLM2-360M-Instruct-q4f16_1-MLC";
+                llm = await webllm.CreateMLCEngine(modelId, {
                     initProgressCallback: (p) => $('#status').text(`LOADING_BRAIN: ${Math.round(p.progress * 100)}%`)
                 });
-                $('#status').text("ONLINE");
-            } catch (err) { $('#status').text("CORE_OFFLINE"); }
+                $('#status').text("SYSTEM: ONLINE");
+                addMessage("Experimental Bot active. Memory banks cleared.");
+            } catch (err) {
+                $('#status').text("SYSTEM: CORE_FAILURE");
+                console.error(err);
+            }
         }
 
-        async function getCommentary(move, isUser) {
+        function addMessage(text) {
+            $('#chat-window').append(`<div class="bubble">> ${text}</div>`).scrollTop(9999);
+        }
+
+        // 3. AI Commentary with History (Memory)
+        async function getAIResponse(move, isUser) {
             if (!llm || isThinking) return;
             isThinking = true;
 
-            const moveText = isUser ? `User played ${move.san}.` : `I played ${move.san}.`;
-            history.push({ role: "user", content: moveText });
-            if (history.length > 4) history.shift(); // Ultra-lean history for low RAM
+            const context = isUser ? `Human played ${move.san}.` : `I played ${move.san}.`;
+            chatHistory.push({ role: "user", content: context });
+            
+            // Limit history to 6 items to keep RAM low
+            if (chatHistory.length > 6) chatHistory.shift();
 
             try {
                 const res = await llm.chat.completions.create({
                     messages: [
-                        { role: "system", content: "You are a witty, competitive chess bot. One short sentence only. Talk about the current move." },
-                        ...history
+                        { role: "system", content: "You are a witty, competitive chess bot named The Tim Chess Experimental Bot. One short sentence only. Talk about the current move." },
+                        ...chatHistory
                     ],
                     temperature: 0.6,
-                    max_tokens: 25
+                    max_tokens: 30
                 });
-                const reply = res.choices[0].message.content.trim().replace(/^(Bot:|Tim:|>)/i, "");
-                $('#chat-window').append(`<div class="bubble">> ${reply}</div>`).scrollTop(999);
-                history.push({ role: "assistant", content: reply });
-            } finally { isThinking = false; }
+
+                const reply = res.choices[0].message.content.trim().replace(/^(Tim:|Bot:|>)/i, "");
+                addMessage(reply);
+                chatHistory.push({ role: "assistant", content: reply });
+            } catch (e) {
+                console.error("AI Error:", e);
+            } finally {
+                isThinking = false;
+            }
         }
 
-        function highlight(move) {
+        function updateHighlight(move) {
             $('.square-55d63').removeClass('highlight-last');
             $(`.square-${move.from}, .square-${move.to}`).addClass('highlight-last');
         }
 
+        // 4. Board Initialization
         $(document).ready(() => {
-            board = Chessboard('board', { position: 'start', draggable: true,
-                onDrop: (s, t) => {
-                    const m = game.move({ from: s, to: t, promotion: 'q' });
-                    if (!m) return 'snapback';
-                    highlight(m);
+            board = Chessboard('board', {
+                position: 'start',
+                draggable: true,
+                // Reliable Wikipedia piece theme
+                pieceTheme: 'https://chessboardjs.com/img/chesspieces/wikipedia/{piece}.png',
+                onDrop: (source, target) => {
+                    const move = game.move({ from: source, to: target, promotion: 'q' });
+                    if (!move) return 'snapback';
+
+                    updateHighlight(move);
                     sf.postMessage(`position fen ${game.fen()}`);
-                    sf.postMessage('go movetime 600');
-                    getCommentary(m, true);
-                    $('#status').text("TIM_THINKING...");
+                    sf.postMessage('go movetime 700');
+                    getAIResponse(move, true);
+                    $('#status').text("SYSTEM: ANALYZING...");
                 }
             });
-            init();
+            initAI();
         });
 
-        $('#undoBtn').click(() => { game.undo(); game.undo(); board.position(game.fen()); });
+        $('#undoBtn').click(() => {
+            game.undo(); game.undo();
+            board.position(game.fen());
+            chatHistory.pop(); chatHistory.pop();
+            addMessage("Logical reversal complete.");
+        });
     </script>
 </body>
 </html>
