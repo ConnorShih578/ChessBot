@@ -54,19 +54,35 @@
         var board = null, game = new Chess(), engine = new Worker('./stockfish-18-lite-single.js'), llm = null, currentEval = 0.0;
 
         // Initialize WebLLM
+       import * as webllm from "https://esm.run/@mlc-ai/web-llm";
+
         async function initAI() {
+            // 1. Specify the Qwen model ID
             const modelId = "Qwen2.5-0.5B-Instruct-q4f16_1-MLC";
+            
             try {
-                llm = await webllm.CreateEngine(modelId, {
+                // 2. Initialize the engine with progress tracking
+                // This will automatically download weights (~400MB) on first run
+                llm = await webllm.CreateMLCEngine(modelId, {
                     initProgressCallback: (report) => {
-                        $('#status-bar').text(`LOADING: ${Math.round(report.progress * 100)}%`);
+                        // Update your UI status bar with the loading progress
+                        const progress = Math.round(report.progress * 100);
+                        $('#status-bar').text(`LOADING: ${progress}%`);
+                        console.log(report.text); // Useful for debugging
                     }
                 });
+                
                 $('#status-bar').text("MODEL: ONLINE (QWEN-0.5B)");
-                speak("AI Brain connected. Make your move.");
+                speak("AI Brain connected. Experimental Bot is ready.");
+                
             } catch (err) {
                 $('#status-bar').text("MODEL: ERROR");
-                console.error(err);
+                console.error("WebLLM failed to initialize:", err);
+                
+                // Check for WebGPU support
+                if (!navigator.gpu) {
+                    alert("WebGPU is not enabled or supported in this browser.");
+                }
             }
         }
 
