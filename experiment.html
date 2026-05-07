@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Tim Chess - Experimental Bot</title>
+    <title>Tim Chess Experimental Bot</title>
     <link rel="stylesheet" href="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.css">
     <style>
         :root {
@@ -40,14 +40,14 @@
 </head>
 <body>
 
-    <h1 style="letter-spacing: 5px;">EXPERIMENTAL_BOT_v1.2</h1>
+    <h1 style="letter-spacing: 5px;">TIM_CHESS_EXPERIMENTAL_BOT_v1.2</h1>
 
     <div id="game-container">
         <div id="board"></div>
         <div id="sidebar">
-            <div id="status-bar">SYSTEM: INITIALIZING...</div>
+            <div id="status-bar">SYSTEM: WAKING UP...</div>
             <div id="chat-window">
-                <div class="bubble">> CONNECTION ESTABLISHED. AWAITING NEURAL LINK...</div>
+                <div class="bubble">> AWAKENING... NEURAL LINK STABLE.</div>
             </div>
             <button onclick="location.reload()">REBOOT SYSTEM</button>
         </div>
@@ -65,41 +65,13 @@
         var board = null;
         var game = new Chess();
         var llm = null;
-        var engineReady = false;
         
-        // --- STOCKFISH ENGINE SETUP ---
+        // --- STOCKFISH SETUP ---
         var engine = new Worker('https://cdn.jsdelivr.net/npm/stockfish/src/stockfish.js');
-        
-        engine.onmessage = function(e) {
-            console.log("SF:", e.data); // Helpful for debugging in browser console
-            
-            if (e.data === 'readyok') {
-                engineReady = true;
-                $('#status-bar').text("SYSTEM: ENGINE READY");
-            }
-
-            if (e.data.startsWith('bestmove')) {
-                var moveStr = e.data.split(' ')[1];
-                if (moveStr && moveStr !== '(none)') {
-                    // Execute move in the chess logic
-                    const result = game.move({ 
-                        from: moveStr.substring(0, 2), 
-                        to: moveStr.substring(2, 4), 
-                        promotion: 'q' 
-                    });
-                    
-                    if (result) {
-                        board.position(game.fen());
-                        $('#status-bar').text("SYSTEM: YOUR TURN");
-                    }
-                }
-            }
-        };
-
-        // Initialize Engine
         engine.postMessage('uci');
         engine.postMessage('setoption name UCI_LimitStrength value true');
         engine.postMessage('setoption name UCI_Elo value 1500'); 
+        engine.postMessage('ucinewgame');
         engine.postMessage('isready');
 
         async function initAI() {
@@ -107,20 +79,20 @@
             try {
                 llm = await webllm.CreateMLCEngine(modelId, {
                     initProgressCallback: (p) => {
-                        $('#status-bar').text(`AI DOWNLOAD: ${Math.round(p.progress * 100)}%`);
+                        $('#status-bar').text(`LOADING NEURAL NETWORK: ${Math.round(p.progress * 100)}%`);
                     }
                 });
-                $('#status-bar').text("SYSTEM: ONLINE");
+                $('#status-bar').text("SYSTEM: READY TO PLAY");
                 
                 const greeting = await llm.chat.completions.create({
                     messages: [
-                        { role: "system", content: "You are the Tim Chess Experimental Bot. Be brief." },
-                        { role: "user", content: "Introduce yourself." }
+                        { role: "system", content: "Your name is Tim Chess Experimental Bot. You're a friendly, enthusiastic, and helpful chess buddy. You love a good game!" },
+                        { role: "user", content: "Hey! Introduce yourself and tell me you're ready to play." }
                     ]
                 });
                 speak(greeting.choices[0].message.content);
             } catch (e) {
-                $('#status-bar').text("SYSTEM: GPU ERROR");
+                $('#status-bar').text("SYSTEM: CONNECTION ERROR");
             }
         }
 
@@ -129,12 +101,23 @@
             $('#chat-window').scrollTop($('#chat-window')[0].scrollHeight);
         }
 
-        async function getAICommentary(moveSan) {
+        async function getAICommentary(moveSan, isPlayer) {
             if (!llm) return;
+
+            let context = isPlayer ? "The player just made a move." : "I just made a move.";
+            if (game.in_check()) context += " Also, someone is in check!";
+            if (game.history().length < 6) context += " We're still in the early opening phase.";
+
             const response = await llm.chat.completions.create({
                 messages: [
-                    { role: "system", content: "You are the Tim Chess Experimental Bot. The user just moved. React in one or two sentences. Do not mention checkmate unless the FEN shows '#' at the end." },
-                    { role: "user", content: `User played ${moveSan}. FEN: ${game.fen()}` }
+                    { 
+                        role: "system", 
+                        content: "You are the Tim Chess Experimental Bot. You're friendly, a bit witty, and love watching the game unfold. React to the latest move naturally. Don't be too technical—be a friend! Avoid calling out checkmate unless the game is actually over." 
+                    },
+                    { 
+                        role: "user", 
+                        content: `${context} The move was ${moveSan}. Current FEN: ${game.fen()}` 
+                    }
                 ]
             });
             speak(response.choices[0].message.content);
@@ -144,14 +127,33 @@
             var move = game.move({ from: source, to: target, promotion: 'q' });
             if (move === null) return 'snapback';
 
-            $('#status-bar').text("SYSTEM: CALCULATING...");
+            $('#status-bar').text("SYSTEM: THINKING...");
+            board.position(game.fen());
             
-            // Send the move to Stockfish
             engine.postMessage('position fen ' + game.fen());
-            engine.postMessage('go depth 12');
+            engine.postMessage('go depth 10'); 
             
-            getAICommentary(move.san);
+            getAICommentary(move.san, true);
         }
+
+        engine.onmessage = function(e) {
+            if (e.data.startsWith('bestmove')) {
+                var moveStr = e.data.split(' ')[1];
+                if (moveStr && moveStr !== '(none)') {
+                    const engineMove = game.move({ 
+                        from: moveStr.substring(0, 2), 
+                        to: moveStr.substring(2, 4), 
+                        promotion: 'q' 
+                    });
+                    
+                    if (engineMove) {
+                        board.position(game.fen());
+                        $('#status-bar').text("SYSTEM: YOUR TURN!");
+                        getAICommentary(engineMove.san, false);
+                    }
+                }
+            }
+        };
 
         $(document).ready(function() {
             board = Chessboard('board', {
