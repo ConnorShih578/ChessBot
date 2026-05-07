@@ -117,16 +117,37 @@
         }
 
         async function getAICommentary(moveSan, isPlayer) {
-            if (!window.llm) return;
-            const prompt = isPlayer ? `The player moved ${moveSan}.` : `I moved ${moveSan}.`;
-            const response = await llm.chat.completions.create({
-                messages: [
-                    { role: "system", content: "You are Tim Chess Experimental Bot. Be witty and tech-focused. One short sentence." },
-                    { role: "user", content: prompt }
-                ]
-            });
-            speak(response.choices[0].message.content);
-        }
+    if (!window.llm) return;
+
+    // Direct role assignment so the AI knows who it is
+    const aiRole = "You are playing as BLACK. The user is playing as WHITE.";
+    const perspective = isPlayer 
+        ? `The user (White) just played ${moveSan}. Acknowledge their move.` 
+        : `You (Black) just played ${moveSan} via the Stockfish engine. Snidely or wittily celebrate your move.`;
+
+    const response = await llm.chat.completions.create({
+        messages: [
+            { 
+                role: "system", 
+                content: `${aiRole} 
+                You are Tim Chess Experimental Bot. You are currently in a live match against the user.
+                Rules:
+                1. Never ask questions or offer advice.
+                2. Be witty, snappy, and use tech/hacker jargon.
+                3. If the user moves, act like a competitive but friendly opponent.
+                4. If YOU move, act like your sub-processors just found a winning vector.
+                5. Keep it to one short sentence.` 
+            },
+            { 
+                role: "user", 
+                content: `${perspective} Current FEN: ${game.fen()}` 
+            }
+        ],
+        temperature: 0.8
+    });
+
+    speak(response.choices[0].message.content);
+}
 
         window.onSquareClick = function() {
             var square = $(this).attr('data-square');
