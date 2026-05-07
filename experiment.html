@@ -53,7 +53,7 @@
         </div>
     </div>
 
-    <footer>The UI and styling was made with AI. Powered by WebLLM, Stockfish 18, QianWen AI, and WebGPU.</footer>
+    <footer>Powered by WebLLM, Stockfish 18, and QianWen AI.</footer>
 
     <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
     <script src="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.js"></script>
@@ -65,15 +65,41 @@
         var board = null;
         var game = new Chess();
         var llm = null;
+        var engineReady = false;
         
-        // --- STOCKFISH SETUP ---
+        // --- STOCKFISH ENGINE SETUP ---
         var engine = new Worker('https://cdn.jsdelivr.net/npm/stockfish/src/stockfish.js');
         
-        // Initialize with UCI Elo Limits per Project "Tim Chess" specs
+        engine.onmessage = function(e) {
+            console.log("SF:", e.data); // Helpful for debugging in browser console
+            
+            if (e.data === 'readyok') {
+                engineReady = true;
+                $('#status-bar').text("SYSTEM: ENGINE READY");
+            }
+
+            if (e.data.startsWith('bestmove')) {
+                var moveStr = e.data.split(' ')[1];
+                if (moveStr && moveStr !== '(none)') {
+                    // Execute move in the chess logic
+                    const result = game.move({ 
+                        from: moveStr.substring(0, 2), 
+                        to: moveStr.substring(2, 4), 
+                        promotion: 'q' 
+                    });
+                    
+                    if (result) {
+                        board.position(game.fen());
+                        $('#status-bar').text("SYSTEM: YOUR TURN");
+                    }
+                }
+            }
+        };
+
+        // Initialize Engine
         engine.postMessage('uci');
         engine.postMessage('setoption name UCI_LimitStrength value true');
         engine.postMessage('setoption name UCI_Elo value 1500'); 
-        engine.postMessage('ucinewgame');
         engine.postMessage('isready');
 
         async function initAI() {
@@ -84,20 +110,17 @@
                         $('#status-bar').text(`AI DOWNLOAD: ${Math.round(p.progress * 100)}%`);
                     }
                 });
-                
                 $('#status-bar').text("SYSTEM: ONLINE");
                 
                 const greeting = await llm.chat.completions.create({
                     messages: [
-                        { role: "system", content: "You are the experimental bot for Tim Chess. You are powered by the QianWen AI model. You are polite and helpful. Do not talk about moves yet." },
-                        { role: "user", content: "Hi, I'm the experimental bot for Tim Chess. I am powered by QianWen. Introduce yourself briefly." }
+                        { role: "system", content: "You are the Tim Chess Experimental Bot. Be brief." },
+                        { role: "user", content: "Introduce yourself." }
                     ]
                 });
                 speak(greeting.choices[0].message.content);
-                
             } catch (e) {
                 $('#status-bar').text("SYSTEM: GPU ERROR");
-                console.error(e);
             }
         }
 
@@ -110,8 +133,8 @@
             if (!llm) return;
             const response = await llm.chat.completions.create({
                 messages: [
-                    { role: "system", content: "You are the experimental bot for Tim Chess. The user just made a move. Give a one-sentence reaction to the player's move. Do not claim you made the move." },
-                    { role: "user", content: `The player just moved ${moveSan}. Current FEN: ${game.fen()}` }
+                    { role: "system", content: "You are the Tim Chess Experimental Bot. The user just moved. React in one or two sentences. Do not mention checkmate unless the FEN shows '#' at the end." },
+                    { role: "user", content: `User played ${moveSan}. FEN: ${game.fen()}` }
                 ]
             });
             speak(response.choices[0].message.content);
@@ -121,32 +144,14 @@
             var move = game.move({ from: source, to: target, promotion: 'q' });
             if (move === null) return 'snapback';
 
-            $('#status-bar').text("SYSTEM: STOCKFISH THINKING...");
+            $('#status-bar').text("SYSTEM: CALCULATING...");
             
-            // Explicitly sync the board and then trigger the engine
-            board.position(game.fen());
+            // Send the move to Stockfish
             engine.postMessage('position fen ' + game.fen());
             engine.postMessage('go depth 12');
             
             getAICommentary(move.san);
         }
-
-        // --- ENGINE RESPONSE HANDLING ---
-        engine.onmessage = function(e) {
-            // Ensure the engine is ready before starting
-            if (e.data === 'readyok') {
-                $('#status-bar').text("SYSTEM: ENGINE READY");
-            }
-
-            if (e.data.startsWith('bestmove')) {
-                var moveStr = e.data.split(' ')[1];
-                if (moveStr && moveStr !== '(none)') {
-                    game.move({ from: moveStr.substring(0, 2), to: moveStr.substring(2, 4), promotion: 'q' });
-                    board.position(game.fen());
-                    $('#status-bar').text("SYSTEM: YOUR TURN");
-                }
-            }
-        };
 
         $(document).ready(function() {
             board = Chessboard('board', {
