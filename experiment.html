@@ -14,14 +14,14 @@
         .bubble { margin-bottom: 10px; border-left: 2px solid var(--accent); padding-left: 10px; line-height: 1.4; }
         #status { font-size: 0.75em; color: var(--accent); margin-bottom: 8px; text-transform: uppercase; letter-spacing: 1px; }
         .controls { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-        button { padding: 10px; cursor: pointer; background: var(--terminal); color: var(--text); border: 1px solid var(--accent); font-family: inherit; transition: 0.2s; }
+        button { padding: 10px; cursor: pointer; background: var(--terminal); color: var(--text); border: 1px solid var(--accent); font-family: inherit; }
         button:hover { background: var(--accent); color: #000; }
         .highlight-last { background-color: rgba(0, 143, 17, 0.4) !important; }
     </style>
 </head>
 <body>
 
-    <h1 style="margin-bottom: 20px;">TIM_CHESS_EXPERIMENTAL_v3</h1>
+    <h1 style="margin-bottom: 20px;">TIM_CHESS_EXPERIMENTAL_v3.2</h1>
 
     <div id="game-container">
         <div id="board"></div>
@@ -50,10 +50,10 @@
         let isThinking = false;
         let chatHistory = [];
 
-        // 1. Initialize Stockfish Engine
+        // 1. Engine setup
         const sf = new Worker('./stockfish-18-lite-single.js');
         sf.postMessage('uci');
-        sf.postMessage('setoption name UCI_Elo value 1500');
+        sf.postMessage('setoption name UCI_Elo value 1400');
 
         sf.onmessage = (e) => {
             if (e.data.startsWith('bestmove')) {
@@ -68,19 +68,16 @@
             }
         };
 
-        // 2. Initialize Lightweight LLM (SmolLM2-360M)
+        // 2. Initialize Lightweight AI
         async function initAI() {
             try {
-                // This model uses ~130MB - 350MB RAM, perfect for 4GB devices
                 const modelId = "SmolLM2-360M-Instruct-q4f16_1-MLC";
                 llm = await webllm.CreateMLCEngine(modelId, {
-                    initProgressCallback: (p) => $('#status').text(`LOADING_BRAIN: ${Math.round(p.progress * 100)}%`)
+                    initProgressCallback: (p) => $('#status').text(`DOWNLOADING_BRAIN: ${Math.round(p.progress * 100)}%`)
                 });
                 $('#status').text("SYSTEM: ONLINE");
-                addMessage("Experimental Bot active. Memory banks cleared.");
             } catch (err) {
                 $('#status').text("SYSTEM: CORE_FAILURE");
-                console.error(err);
             }
         }
 
@@ -88,28 +85,39 @@
             $('#chat-window').append(`<div class="bubble">> ${text}</div>`).scrollTop(9999);
         }
 
-        // 3. AI Commentary with History (Memory)
+        // 3. AI Commentary with Identity Guard
         async function getAIResponse(move, isUser) {
             if (!llm || isThinking) return;
             isThinking = true;
 
-            const context = isUser ? `Human played ${move.san}.` : `I played ${move.san}.`;
-            chatHistory.push({ role: "user", content: context });
-            
-            // Limit history to 6 items to keep RAM low
+            const userPrompt = isUser 
+                ? `The human opponent played ${move.san}. How do you react to this move?` 
+                : `You (the Tim Chess Experimental Bot) just played ${move.san}. What is your status update?`;
+
+            chatHistory.push({ role: "user", content: userPrompt });
             if (chatHistory.length > 6) chatHistory.shift();
 
             try {
                 const res = await llm.chat.completions.create({
                     messages: [
-                        { role: "system", content: "You are a witty, competitive chess bot named The Tim Chess Experimental Bot. One short sentence only. Talk about the current move." },
+                        { 
+                            role: "system", 
+                            content: "You are the Tim Chess Experimental Bot. You are competitive and witty. CRITICAL: Never start your response with 'Human played' or 'I played'. Respond with one short unique sentence only. Do not repeat history." 
+                        },
                         ...chatHistory
                     ],
                     temperature: 0.6,
                     max_tokens: 30
                 });
 
-                const reply = res.choices[0].message.content.trim().replace(/^(Tim:|Bot:|>)/i, "");
+                let reply = res.choices[0].message.content.trim();
+                
+                // Response Sanitizer: Cut off the bot if it starts hallucinating its name or history
+                reply = reply.split('\n')[0];
+                reply = reply.replace(/^(Tim Chess Experimental Bot:|Tim:|Bot:|Human played|I played|>)/i, "").trim();
+
+                if (reply.length < 3) reply = "Processing that move... intriguing choice.";
+
                 addMessage(reply);
                 chatHistory.push({ role: "assistant", content: reply });
             } catch (e) {
@@ -124,12 +132,10 @@
             $(`.square-${move.from}, .square-${move.to}`).addClass('highlight-last');
         }
 
-        // 4. Board Initialization
         $(document).ready(() => {
             board = Chessboard('board', {
                 position: 'start',
                 draggable: true,
-                // Reliable Wikipedia piece theme
                 pieceTheme: 'https://chessboardjs.com/img/chesspieces/wikipedia/{piece}.png',
                 onDrop: (source, target) => {
                     const move = game.move({ from: source, to: target, promotion: 'q' });
@@ -148,8 +154,8 @@
         $('#undoBtn').click(() => {
             game.undo(); game.undo();
             board.position(game.fen());
-            chatHistory.pop(); chatHistory.pop();
-            addMessage("Logical reversal complete.");
+            chatHistory.length = 0; // Fresh memory after an undo to avoid pattern-locking
+            addMessage("Logical reversal: Memory systems cleared.");
         });
     </script>
 </body>
