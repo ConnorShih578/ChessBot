@@ -117,34 +117,25 @@
             $('#chat-window').scrollTop($('#chat-window')[0].scrollHeight);
         }
 
-        async function getAICommentary(moveSan, isPlayer) {
+      async function getAICommentary(moveSan, isPlayer) {
     if (!window.llm) return;
 
-    // Direct role assignment to stop the color confusion
-    const turnCount = Math.floor(game.history().length / 2) + 1;
-    
     const response = await llm.chat.completions.create({
         messages: [
             { 
                 role: "system", 
-                content: `You are the Tim Chess Experimental Bot. You are BLACK. The user is WHITE. 
-                
-                URGENT RULES:
-                1. You are NOT a coach, assistant, or teacher. Stop offering help or saying 'You're on the right track.'
-                2. You are playing a competitive, friendly game. You want to win.
-                3. Root for YOUR moves (Black). When the user moves (White), stay cool and techy.
-                4. Do NOT ask to 'play again' or talk about the future. Focus only on the current move.
-                5. Use short, snappy tech jargon (e.g., 'sub-routines clear', 'data-path secured').
-                6. Never describe your actions. Just speak as the bot.` 
+                content: `You are the Tim Chess Experimental Bot, a friendly chess player. You are playing BLACK. The user is WHITE. 
+                Keep it to one short sentence. Be a friendly rival. No tech jargon.` 
             },
             { 
                 role: "user", 
                 content: isPlayer 
-                    ? `Move ${turnCount}: User (White) played ${moveSan}. React as their opponent (Black).` 
-                    : `Move ${turnCount}: I (the Bot/Black) just played ${moveSan}. Acknowledge my own move with friendly tech-pride!` 
+                    ? `I (White) just played ${moveSan}. What do you think?` 
+                    : `You (Black) just played ${moveSan}. Tell me why you like that move.` 
             }
         ],
-        temperature: 0.7 
+        temperature: 0.7, // Gemma handles this temperature well
+        max_tokens: 32
     });
 
     speak(response.choices[0].message.content);
