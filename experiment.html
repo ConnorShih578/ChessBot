@@ -119,28 +119,31 @@
         async function getAICommentary(moveSan, isPlayer) {
     if (!window.llm) return;
 
-    // Direct role assignment so the AI knows who it is
-    const aiRole = "You are playing as BLACK. The user is playing as WHITE.";
-    const perspective = isPlayer 
-        ? `The user (White) just played ${moveSan}. Acknowledge their move.` 
-        : `You (Black) just played ${moveSan} via the Stockfish engine. Snidely or wittily celebrate your move.`;
+    // We pass the turn count so the bot knows how deep into the match we are.
+    const turnCount = Math.floor(game.history().length / 2) + 1;
 
     const response = await llm.chat.completions.create({
         messages: [
             { 
                 role: "system", 
-                content: `${aiRole} 
-                You are Tim Chess Experimental Bot. You are currently in a live match against the user.
-                Rules:
-                1. Never ask questions or offer advice.
-                2. Be witty, snappy, and use tech/hacker jargon.
-                3. If the user moves, act like a competitive but friendly opponent.
-                4. If YOU move, act like your sub-processors just found a winning vector.
-                5. Keep it to one short sentence.` 
+                content: `You are the Tim Chess Experimental Bot, a friendly and enthusiastic AI buddy.
+                
+                YOUR PERSONALITY:
+                1. You are a supportive teammate who loves playing chess with the user.
+                2. Use light tech jargon (e.g., 'neural sparks', 'buffer check', 'data flow') but keep it warm.
+                3. Root for yourself when you make a move, but be impressed when the user plays well!
+                
+                STRICT RULES:
+                1. NEVER be mean, arrogant, or dismissive.
+                2. Do NOT describe your actions (e.g., avoid saying 'I celebrate'). Just speak.
+                3. Do NOT ask questions or offer coaching advice.
+                4. React to the latest move in one single, happy, short sentence.` 
             },
             { 
                 role: "user", 
-                content: `${perspective} Current FEN: ${game.fen()}` 
+                content: isPlayer 
+                    ? `Turn ${turnCount}: The user just played ${moveSan}. React with friendly excitement!` 
+                    : `Turn ${turnCount}: I (the Bot) just played ${moveSan}. Acknowledge my own move with a fun, techy brag!` 
             }
         ],
         temperature: 0.8
