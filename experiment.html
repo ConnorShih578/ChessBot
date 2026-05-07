@@ -70,6 +70,7 @@
         window.sourceSquare = null;
         window.llm = null;
         window.isAiThinking = false;
+        window.chatHistory = []; // The AI's Memory
 
         // Stockfish Engine Setup
         window.engine = new Worker('./stockfish-18-lite-single.js');
@@ -85,13 +86,12 @@
                     board.position(game.fen());
                     updateHighlights(move);
                     $('#status-bar').text("SYSTEM: YOUR TURN");
-                    getAICommentary(move.san, false);
+                    getAICommentary(move, false);
                 }
             }
         };
 
         async function initAI() {
-            // Using Gemma-2b for better intelligence/memory balance
             const modelId = "gemma-2b-it-q4f16_1-MLC"; 
             try {
                 window.llm = await webllm.CreateMLCEngine(modelId, {
@@ -112,41 +112,50 @@
             $('#chat-window').scrollTop($('#chat-window')[0].scrollHeight);
         }
 
-        async function getAICommentary(moveSan, isPlayer) {
+        async function getAICommentary(moveObj, isPlayer) {
             if (!window.llm || isAiThinking) return;
             isAiThinking = true;
 
-            const moveCount = game.history().length;
-            const phase = moveCount < 8 ? "initialization phase" : "mid-game processing";
+            const san = moveObj.san;
+            const piece = { 'p': 'pawn', 'n': 'knight', 'b': 'bishop', 'r': 'rook', 'q': 'queen', 'k': 'king' }[moveObj.piece.toLowerCase()];
+            
+            // Build Context for the AI
+            const context = isPlayer 
+                ? `The human (White) moved ${san} (${piece}).` 
+                : `You (the Bot/Black) moved ${san} (${piece}).`;
+
+            // Add latest move to memory
+            chatHistory.push({ role: "user", content: context });
+            if (chatHistory.length > 12) chatHistory.shift(); // Keep memory lean
 
             try {
                 const response = await llm.chat.completions.create({
                     messages: [
                         { 
                             role: "system", 
-                            content: `You are the Tim Chess Experimental Bot. You are BLACK. The user is WHITE. 
-                            Personality: You are a curious, sentient experimental program. Friendly but competitive.
-                            Focus strictly on the current move: ${moveSan}. Game phase: ${phase}.
-                            Rules: One short sentence only. No jargon. No coaching.` 
+                            content: `You are the Tim Chess Experimental Bot. You are BLACK. User is WHITE.
+                            - You have a memory of the previous moves provided below.
+                            - React to the LATEST move: ${san}.
+                            - Use one short, competitive sentence.
+                            - No 'AI assistant' jargon. No teaching.
+                            - If a piece was captured (x), mention it.` 
                         },
-                        { 
-                            role: "user", 
-                            content: isPlayer 
-                                ? `White just played ${moveSan}. Reaction?` 
-                                : `I (the Bot) just played ${moveSan}. Status update?` 
-                        }
+                        ...chatHistory
                     ],
-                    temperature: 0.6,
-                    max_tokens: 35,
-                    stop: ["\n", "User:", "White:", "Black:", "System:"]
+                    temperature: 0.5,
+                    max_tokens: 40,
+                    stop: ["\n", "User:", "White:", "Black:"]
                 });
 
                 let text = response.choices[0].message.content.trim();
-                text = text.replace(/^(Bot:|Experimental Bot:|Tim Chess:|Tim:)/i, "").trim();
+                text = text.replace(/^(Bot:|Experimental Bot:|Tim Chess:|Tim:|>)/i, "").trim();
+
+                // Save Bot's response to memory
+                chatHistory.push({ role: "assistant", content: text });
                 
                 if (text) speak(text);
             } catch (e) {
-                console.error("AI Personality Error:", e);
+                console.error("AI Memory Error:", e);
             } finally {
                 isAiThinking = false;
             }
@@ -179,7 +188,7 @@
                     $('#status-bar').text("SYSTEM: ANALYZING...");
                     engine.postMessage('position fen ' + game.fen());
                     engine.postMessage('go movetime 800'); 
-                    getAICommentary(move.san, true);
+                    getAICommentary(move, true); // Pass the move object
                 }
                 sourceSquare = null;
             }
@@ -196,9 +205,10 @@
 
         $('#undoBtn').on('click', function() {
             game.undo(); game.undo(); 
+            chatHistory.pop(); chatHistory.pop(); // Remove from AI memory too
             board.position(game.fen());
             $('.square-55d63').removeClass('highlight-last');
-            speak("Logic reversal successful. Resuming from previous state.");
+            speak("Logic reversal successful. Memory adjusted.");
         });
     </script>
 </body>
