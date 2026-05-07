@@ -18,7 +18,7 @@
             display: flex; flex-direction: column; align-items: center; margin: 0; padding: 20px; 
         }
         #game-container { display: flex; gap: 20px; width: 100%; max-width: 1000px; height: 600px; margin-top: 20px; }
-        #board { width: 500px; flex-shrink: 0; border: 2px solid var(--accent); box-shadow: 0 0 20px var(--terminal); }
+        #board { width: 550px; flex-shrink: 0; border: 2px solid var(--accent); box-shadow: 0 0 20px var(--terminal); }
         #sidebar { 
             flex: 1; background: var(--sidebar); border-radius: 4px; 
             padding: 20px; display: flex; flex-direction: column; border: 1px solid var(--accent);
@@ -35,25 +35,29 @@
             color: var(--text); border: 1px solid var(--accent); font-weight: bold; font-family: inherit;
         }
         button:hover { background: var(--accent); color: #000; }
-        footer { margin-top: 30px; color: #333; font-size: 0.7em; }
+        .highlight-sq { box-shadow: inset 0 0 3px 3px var(--accent); }
+        .highlight-last { background-color: rgba(0, 143, 17, 0.3) !important; }
     </style>
 </head>
 <body>
 
-    <h1 style="letter-spacing: 5px;">TIM_CHESS_EXPERIMENTAL_BOT_v1.2</h1>
+    <h1 style="letter-spacing: 5px;">TIM_CHESS_EXPERIMENTAL_BOT</h1>
 
     <div id="game-container">
         <div id="board"></div>
         <div id="sidebar">
             <div id="status-bar">SYSTEM: WAKING UP...</div>
             <div id="chat-window">
-                <div class="bubble">> AWAKENING... NEURAL LINK STABLE.</div>
+                <div class="bubble">> CONNECTION ESTABLISHED.</div>
             </div>
-            <button onclick="location.reload()">REBOOT SYSTEM</button>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                <button id="undoBtn">UNDO MOVE</button>
+                <button onclick="location.reload()">NEW SYSTEM BOOT</button>
+            </div>
         </div>
     </div>
 
-    <footer>Powered by WebLLM, Stockfish 18, and QianWen AI.</footer>
+    <footer>Powered by WebLLM (QianWen) and Stockfish 18.</footer>
 
     <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
     <script src="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.js"></script>
@@ -62,16 +66,16 @@
     <script type="module">
         import * as webllm from "https://esm.run/@mlc-ai/web-llm";
 
-        var board = null;
-        var game = new Chess();
-        var llm = null;
-        
-        // --- STOCKFISH SETUP ---
-        var engine = new Worker('https://cdn.jsdelivr.net/npm/stockfish/src/stockfish.js');
+        var board = null,
+            game = new Chess(),
+            engine = new Worker('https://cdn.jsdelivr.net/npm/stockfish/src/stockfish.js'),
+            sourceSquare = null,
+            llm = null;
+
+        // --- ENGINE INITIALIZATION (Gween Turtle Style) ---
         engine.postMessage('uci');
         engine.postMessage('setoption name UCI_LimitStrength value true');
-        engine.postMessage('setoption name UCI_Elo value 1500'); 
-        engine.postMessage('ucinewgame');
+        engine.postMessage('setoption name UCI_Elo value 1500');
         engine.postMessage('isready');
 
         async function initAI() {
@@ -79,20 +83,20 @@
             try {
                 llm = await webllm.CreateMLCEngine(modelId, {
                     initProgressCallback: (p) => {
-                        $('#status-bar').text(`LOADING NEURAL NETWORK: ${Math.round(p.progress * 100)}%`);
+                        $('#status-bar').text(`DOWNLOADING NEURAL LINK: ${Math.round(p.progress * 100)}%`);
                     }
                 });
-                $('#status-bar').text("SYSTEM: READY TO PLAY");
+                $('#status-bar').text("SYSTEM: ONLINE");
                 
                 const greeting = await llm.chat.completions.create({
                     messages: [
-                        { role: "system", content: "Your name is Tim Chess Experimental Bot. You're a friendly, enthusiastic, and helpful chess buddy. You love a good game!" },
-                        { role: "user", content: "Hey! Introduce yourself and tell me you're ready to play." }
+                        { role: "system", content: "Your name is Tim Chess Experimental Bot. You are a friendly, witty, and helpful chess buddy. You love a good game! Use a touch of hacker-style lingo (like 'neural link' or 'reboot')." },
+                        { role: "user", content: "Introduce yourself quickly and say you're ready to play!" }
                     ]
                 });
                 speak(greeting.choices[0].message.content);
             } catch (e) {
-                $('#status-bar').text("SYSTEM: CONNECTION ERROR");
+                $('#status-bar').text("SYSTEM: GPU OFFLINE");
             }
         }
 
@@ -103,66 +107,82 @@
 
         async function getAICommentary(moveSan, isPlayer) {
             if (!llm) return;
-
-            let context = isPlayer ? "The player just made a move." : "I just made a move.";
-            if (game.in_check()) context += " Also, someone is in check!";
-            if (game.history().length < 6) context += " We're still in the early opening phase.";
-
+            const roleContext = isPlayer ? "The player just moved." : "I just moved.";
+            
             const response = await llm.chat.completions.create({
                 messages: [
                     { 
                         role: "system", 
-                        content: "You are the Tim Chess Experimental Bot. You're friendly, a bit witty, and love watching the game unfold. React to the latest move naturally. Don't be too technical—be a friend! Avoid calling out checkmate unless the game is actually over." 
+                        content: "You are the Tim Chess Experimental Bot. You're a friendly, witty friend. React to the move naturally in one short sentence. Stay in character as a cool, experimental AI buddy." 
                     },
                     { 
                         role: "user", 
-                        content: `${context} The move was ${moveSan}. Current FEN: ${game.fen()}` 
+                        content: `${roleContext} Move was ${moveSan}. FEN: ${game.fen()}` 
                     }
                 ]
             });
             speak(response.choices[0].message.content);
         }
 
-        function onDrop(source, target) {
-            var move = game.move({ from: source, to: target, promotion: 'q' });
-            if (move === null) return 'snapback';
+        function onSquareClick() {
+            var square = $(this).attr('data-square');
+            if (game.game_over()) return;
 
-            $('#status-bar').text("SYSTEM: THINKING...");
-            board.position(game.fen());
-            
-            engine.postMessage('position fen ' + game.fen());
-            engine.postMessage('go depth 10'); 
-            
-            getAICommentary(move.san, true);
+            if (sourceSquare === null) {
+                var piece = game.get(square);
+                if (piece && piece.color === game.turn()) {
+                    sourceSquare = square;
+                    $('.square-55d63').removeClass('highlight-sq');
+                    $('.square-' + square).addClass('highlight-sq');
+                }
+            } else {
+                var move = game.move({ from: sourceSquare, to: square, promotion: 'q' });
+                $('.square-55d63').removeClass('highlight-sq');
+                
+                if (move) {
+                    board.position(game.fen());
+                    $('.square-55d63').removeClass('highlight-last');
+                    $('.square-'+move.from+', .square-'+move.to).addClass('highlight-last');
+                    
+                    $('#status-bar').text("SYSTEM: CALCULATING...");
+                    engine.postMessage('position fen ' + game.fen());
+                    engine.postMessage('go movetime 1000'); 
+                    getAICommentary(move.san, true);
+                }
+                sourceSquare = null;
+            }
         }
 
         engine.onmessage = function(e) {
             if (e.data.startsWith('bestmove')) {
-                var moveStr = e.data.split(' ')[1];
-                if (moveStr && moveStr !== '(none)') {
-                    const engineMove = game.move({ 
-                        from: moveStr.substring(0, 2), 
-                        to: moveStr.substring(2, 4), 
-                        promotion: 'q' 
-                    });
+                var m = e.data.split(' ')[1];
+                if (m && m !== '(none)') {
+                    var move = game.move({ from: m.substring(0, 2), to: m.substring(2, 4), promotion: 'q' });
+                    board.position(game.fen());
+                    $('.square-55d63').removeClass('highlight-last');
+                    $('.square-'+move.from+', .square-'+move.to).addClass('highlight-last');
                     
-                    if (engineMove) {
-                        board.position(game.fen());
-                        $('#status-bar').text("SYSTEM: YOUR TURN!");
-                        getAICommentary(engineMove.san, false);
-                    }
+                    $('#status-bar').text("SYSTEM: YOUR TURN");
+                    getAICommentary(move.san, false);
                 }
             }
         };
 
+        $('#undoBtn').on('click', function() {
+            game.undo(); game.undo(); 
+            board.position(game.fen());
+            $('.square-55d63').removeClass('highlight-last');
+            sourceSquare = null;
+            speak("Reverting neural sequence. Let's try that again!");
+        });
+
         $(document).ready(function() {
-            board = Chessboard('board', {
-                draggable: true,
-                position: 'start',
-                onDrop: onDrop,
-                onSnapEnd: function() { board.position(game.fen()); },
-                pieceTheme: 'https://chessboardjs.com/img/chesspieces/wikipedia/{piece}.png'
+            board = Chessboard('board', { 
+                position: 'start', 
+                draggable: false, 
+                pieceTheme: 'https://chessboardjs.com/img/chesspieces/wikipedia/{piece}.png' 
             });
+            $(document).on('click', '.square-55d63', onSquareClick);
             initAI();
         });
     </script>
