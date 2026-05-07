@@ -28,8 +28,8 @@
             overflow-y: auto; margin-bottom: 15px; border: 1px solid var(--terminal);
             font-size: 0.9em; color: var(--text);
         }
-        .bubble { margin-bottom: 12px; border-left: 2px solid var(--accent); padding-left: 10px; }
-        #status-bar { font-size: 0.7em; color: var(--accent); margin-bottom: 10px; }
+        .bubble { margin-bottom: 12px; border-left: 2px solid var(--accent); padding-left: 10px; line-height: 1.4; }
+        #status-bar { font-size: 0.7em; color: var(--accent); margin-bottom: 10px; text-transform: uppercase; }
         button { 
             padding: 12px; cursor: pointer; background: var(--terminal); 
             color: var(--text); border: 1px solid var(--accent); font-family: inherit;
@@ -46,13 +46,13 @@
     <div id="game-container">
         <div id="board"></div>
         <div id="sidebar">
-            <div id="status-bar">SYSTEM: BOOTING...</div>
+            <div id="status-bar">SYSTEM: INITIALIZING...</div>
             <div id="chat-window">
                 <div class="bubble">> NEURAL LINK INITIALIZED.</div>
             </div>
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-                <button id="undoBtn">UNDO</button>
-                <button onclick="location.reload()">REBOOT</button>
+                <button id="undoBtn">UNDO_MOVE</button>
+                <button onclick="location.reload()">REBOOT_SYS</button>
             </div>
         </div>
     </div>
@@ -71,12 +71,11 @@
         window.llm = null;
         window.isAiThinking = false;
 
-        // Initialize Local Stockfish
+        // Stockfish Engine Setup
         window.engine = new Worker('./stockfish-18-lite-single.js');
         engine.postMessage('uci');
         engine.postMessage('setoption name UCI_LimitStrength value true');
         engine.postMessage('setoption name UCI_Elo value 1800');
-        engine.postMessage('isready');
 
         engine.onmessage = function(e) {
             if (e.data.startsWith('bestmove')) {
@@ -84,8 +83,7 @@
                 if (m && m !== '(none)') {
                     var move = game.move({ from: m.substring(0, 2), to: m.substring(2, 4), promotion: 'q' });
                     board.position(game.fen());
-                    $('.square-55d63').removeClass('highlight-last');
-                    $('.square-'+move.from+', .square-'+move.to).addClass('highlight-last');
+                    updateHighlights(move);
                     $('#status-bar').text("SYSTEM: YOUR TURN");
                     getAICommentary(move.san, false);
                 }
@@ -93,17 +91,18 @@
         };
 
         async function initAI() {
+            // Using Gemma-2b for better intelligence/memory balance
             const modelId = "gemma-2b-it-q4f16_1-MLC"; 
             try {
                 window.llm = await webllm.CreateMLCEngine(modelId, {
                     initProgressCallback: (p) => {
-                        $('#status-bar').text(`LOADING BRAIN: ${Math.round(p.progress * 100)}%`);
+                        $('#status-bar').text(`DOWNLOADING_BRAIN: ${Math.round(p.progress * 100)}%`);
                     }
                 });
                 $('#status-bar').text("SYSTEM: ONLINE");
                 speak("Experimental Bot active. Ready to process moves.");
             } catch (e) {
-                $('#status-bar').text("SYSTEM: BRAIN OFFLINE");
+                $('#status-bar').text("SYSTEM: CORE_FAILURE");
                 console.error(e);
             }
         }
@@ -114,63 +113,48 @@
         }
 
         async function getAICommentary(moveSan, isPlayer) {
-    if (!window.llm || isAiThinking) return;
-    isAiThinking = true;
+            if (!window.llm || isAiThinking) return;
+            isAiThinking = true;
 
-    // Help the bot understand how early/late the game is
-    const moveCount = game.history().length;
-    const phase = moveCount < 6 ? "initialization phase" : "mid-game processing";
+            const moveCount = game.history().length;
+            const phase = moveCount < 8 ? "initialization phase" : "mid-game processing";
 
-    try {
-        const response = await llm.chat.completions.create({
-            messages: [
-                { 
-                    role: "system", 
-                    content: `You are the Tim Chess Experimental Bot. You are BLACK. The user is WHITE. 
-                    
-                    PERSONALITY:
-                    - You are a sentient, curious experimental program. 
-                    - You are friendly but competitive.
-                    - You stay focused strictly on the current move (${moveSan}) and current game state (${phase}).
-                    
-                    STRICT RULES:
-                    1. One short sentence only.
-                    2. Do not offer help or call moves mistakes.
-                    3. Do not imagine pieces moving that haven't moved yet.
-                    4. Talk like a curious bot, not a teacher.` 
-                },
-                { 
-                    role: "user", 
-                    content: isPlayer 
-                        ? `The user (White) just initialized the move ${moveSan}. What is your bot-reaction?` 
-                        : `I (the Experimental Bot) just processed the move ${moveSan}. Give a quick, proud status update.` 
-                }
-            ],
-            temperature: 0.6, // Balanced: clever but won't hallucinate rooks as often
-            max_tokens: 35,
-            stop: ["\n", "User:", "White:", "Black:", "System:"]
-        });
+            try {
+                const response = await llm.chat.completions.create({
+                    messages: [
+                        { 
+                            role: "system", 
+                            content: `You are the Tim Chess Experimental Bot. You are BLACK. The user is WHITE. 
+                            Personality: You are a curious, sentient experimental program. Friendly but competitive.
+                            Focus strictly on the current move: ${moveSan}. Game phase: ${phase}.
+                            Rules: One short sentence only. No jargon. No coaching.` 
+                        },
+                        { 
+                            role: "user", 
+                            content: isPlayer 
+                                ? `White just played ${moveSan}. Reaction?` 
+                                : `I (the Bot) just played ${moveSan}. Status update?` 
+                        }
+                    ],
+                    temperature: 0.6,
+                    max_tokens: 35,
+                    stop: ["\n", "User:", "White:", "Black:", "System:"]
+                });
 
-        let text = response.choices[0].message.content.trim();
-        
-        // Clean up any weird prefixes the model might add
-        text = text.replace(/^(Bot:|Experimental Bot:|Tim Chess:)/i, "").trim();
-        
-        if (text) speak(text);
-    } catch (e) {
-        console.error("AI Error:", e);
-    } finally {
-        isAiThinking = false;
-    }
-}
                 let text = response.choices[0].message.content.trim();
-                text = text.replace(/^(Tim:|Black:|White:)/i, "").trim();
+                text = text.replace(/^(Bot:|Experimental Bot:|Tim Chess:|Tim:)/i, "").trim();
+                
                 if (text) speak(text);
             } catch (e) {
-                console.error("AI Error:", e);
+                console.error("AI Personality Error:", e);
             } finally {
                 isAiThinking = false;
             }
+        }
+
+        function updateHighlights(move) {
+            $('.square-55d63').removeClass('highlight-last');
+            $('.square-' + move.from + ', .square-' + move.to).addClass('highlight-last');
         }
 
         window.onSquareClick = function() {
@@ -190,12 +174,11 @@
                 
                 if (move) {
                     board.position(game.fen());
-                    $('.square-55d63').removeClass('highlight-last');
-                    $('.square-'+move.from+', .square-'+move.to).addClass('highlight-last');
+                    updateHighlights(move);
                     
                     $('#status-bar').text("SYSTEM: ANALYZING...");
                     engine.postMessage('position fen ' + game.fen());
-                    engine.postMessage('go movetime 1000'); 
+                    engine.postMessage('go movetime 800'); 
                     getAICommentary(move.san, true);
                 }
                 sourceSquare = null;
@@ -215,7 +198,7 @@
             game.undo(); game.undo(); 
             board.position(game.fen());
             $('.square-55d63').removeClass('highlight-last');
-            speak("Moves reversed. Let's try that again.");
+            speak("Logic reversal successful. Resuming from previous state.");
         });
     </script>
 </body>
