@@ -18,7 +18,7 @@
             display: flex; flex-direction: column; align-items: center; margin: 0; padding: 20px; 
         }
         #game-container { display: flex; gap: 20px; width: 100%; max-width: 1000px; height: 600px; margin-top: 20px; }
-        #board { width: 550px; flex-shrink: 0; border: 2px solid var(--accent); box-shadow: 0 0 20px var(--terminal); }
+        #board { width: 550px; flex-shrink: 0; border: 2px solid var(--accent); }
         #sidebar { 
             flex: 1; background: var(--sidebar); border-radius: 4px; 
             padding: 20px; display: flex; flex-direction: column; border: 1px solid var(--accent);
@@ -26,105 +26,109 @@
         #chat-window { 
             flex: 1; background: #000; border-radius: 4px; padding: 15px; 
             overflow-y: auto; margin-bottom: 15px; border: 1px solid var(--terminal);
-            font-size: 0.85em; color: var(--text);
+            font-size: 0.9em; color: var(--text);
         }
-        .bubble { margin-bottom: 12px; border-left: 2px solid var(--accent); padding-left: 10px; line-height: 1.4; }
-        #status-bar { font-size: 0.7em; color: var(--accent); margin-bottom: 10px; text-transform: uppercase; letter-spacing: 1px; }
+        .bubble { margin-bottom: 12px; border-left: 2px solid var(--accent); padding-left: 10px; }
+        #status-bar { font-size: 0.7em; color: var(--accent); margin-bottom: 10px; }
         button { 
             padding: 12px; cursor: pointer; background: var(--terminal); 
-            color: var(--text); border: 1px solid var(--accent); font-weight: bold; font-family: inherit;
+            color: var(--text); border: 1px solid var(--accent); font-family: inherit;
         }
         button:hover { background: var(--accent); color: #000; }
         .highlight-sq { box-shadow: inset 0 0 3px 3px var(--accent); }
-        .highlight-last { background-color: rgba(0, 143, 17, 0.3) !important; }
+        .highlight-last { background-color: rgba(0, 143, 17, 0.4) !important; }
     </style>
 </head>
 <body>
 
-    <h1 style="letter-spacing: 5px;">TIM_CHESS_EXPERIMENTAL_BOT</h1>
+    <h1>TIM_CHESS_EXPERIMENTAL</h1>
 
     <div id="game-container">
         <div id="board"></div>
         <div id="sidebar">
-            <div id="status-bar">SYSTEM: WAKING UP...</div>
+            <div id="status-bar">SYSTEM: BOOTING...</div>
             <div id="chat-window">
-                <div class="bubble">> CONNECTION ESTABLISHED.</div>
+                <div class="bubble">> NEURAL LINK INITIALIZED.</div>
             </div>
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-                <button id="undoBtn">UNDO MOVE</button>
-                <button onclick="location.reload()">NEW SYSTEM BOOT</button>
+                <button id="undoBtn">UNDO</button>
+                <button onclick="location.reload()">REBOOT</button>
             </div>
         </div>
     </div>
-
-    <footer>Powered by WebLLM (QianWen) and Stockfish 18.</footer>
 
     <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
     <script src="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>
 
+    <!-- We use type="module" only for the WebLLM parts, but keep engine global -->
     <script type="module">
         import * as webllm from "https://esm.run/@mlc-ai/web-llm";
 
-        var board = null,
-            game = new Chess(),
-            engine = new Worker('https://cdn.jsdelivr.net/npm/stockfish/src/stockfish.js'),
-            sourceSquare = null,
-            llm = null;
+        // Global variables for the game state
+        window.board = null;
+        window.game = new Chess();
+        window.sourceSquare = null;
+        window.llm = null;
 
-        // --- ENGINE INITIALIZATION (Gween Turtle Style) ---
+        // Initialize Local Stockfish (Using your exact file name)
+        window.engine = new Worker('./stockfish-18-lite-single.js');
+
+        // Engine Handshake
         engine.postMessage('uci');
         engine.postMessage('setoption name UCI_LimitStrength value true');
-        engine.postMessage('setoption name UCI_Elo value 1500');
+        engine.postMessage('setoption name UCI_Elo value 1800'); // Higher for Experimental bot
         engine.postMessage('isready');
+
+        // Engine Response Logic
+        engine.onmessage = function(e) {
+            console.log("Stockfish:", e.data); // Helpful for debugging
+            if (e.data.startsWith('bestmove')) {
+                var m = e.data.split(' ')[1];
+                if (m && m !== '(none)') {
+                    var move = game.move({ from: m.substring(0, 2), to: m.substring(2, 4), promotion: 'q' });
+                    board.position(game.fen());
+                    $('.square-55d63').removeClass('highlight-last');
+                    $('.square-'+move.from+', .square-'+move.to).addClass('highlight-last');
+                    $('#status-bar').text("SYSTEM: YOUR TURN");
+                    getAICommentary(move.san, false);
+                }
+            }
+        };
 
         async function initAI() {
             const modelId = "Qwen2.5-0.5B-Instruct-q4f16_1-MLC";
             try {
-                llm = await webllm.CreateMLCEngine(modelId, {
+                window.llm = await webllm.CreateMLCEngine(modelId, {
                     initProgressCallback: (p) => {
-                        $('#status-bar').text(`DOWNLOADING NEURAL LINK: ${Math.round(p.progress * 100)}%`);
+                        $('#status-bar').text(`LOADING PERSONALITY: ${Math.round(p.progress * 100)}%`);
                     }
                 });
                 $('#status-bar').text("SYSTEM: ONLINE");
-                
-                const greeting = await llm.chat.completions.create({
-                    messages: [
-                        { role: "system", content: "Your name is Tim Chess Experimental Bot. You are a friendly, witty, and helpful chess buddy. You love a good game! Use a touch of hacker-style lingo (like 'neural link' or 'reboot')." },
-                        { role: "user", content: "Introduce yourself quickly and say you're ready to play!" }
-                    ]
-                });
-                speak(greeting.choices[0].message.content);
+                speak("Experimental Bot active. Ready to process moves.");
             } catch (e) {
-                $('#status-bar').text("SYSTEM: GPU OFFLINE");
+                $('#status-bar').text("SYSTEM: PERSONALITY OFFLINE");
             }
         }
 
-        function speak(text) {
+        window.speak = function(text) {
             $('#chat-window').append(`<div class="bubble">> ${text}</div>`);
             $('#chat-window').scrollTop($('#chat-window')[0].scrollHeight);
         }
 
         async function getAICommentary(moveSan, isPlayer) {
-            if (!llm) return;
-            const roleContext = isPlayer ? "The player just moved." : "I just moved.";
-            
+            if (!window.llm) return;
+            const prompt = isPlayer ? `The player moved ${moveSan}.` : `I moved ${moveSan}.`;
             const response = await llm.chat.completions.create({
                 messages: [
-                    { 
-                        role: "system", 
-                        content: "You are the Tim Chess Experimental Bot. You're a friendly, witty friend. React to the move naturally in one short sentence. Stay in character as a cool, experimental AI buddy." 
-                    },
-                    { 
-                        role: "user", 
-                        content: `${roleContext} Move was ${moveSan}. FEN: ${game.fen()}` 
-                    }
+                    { role: "system", content: "You are Tim Chess Experimental Bot. Be witty and tech-focused. One short sentence." },
+                    { role: "user", content: prompt }
                 ]
             });
             speak(response.choices[0].message.content);
         }
 
-        function onSquareClick() {
+        window.onSquareClick = function() {
             var square = $(this).attr('data-square');
             if (game.game_over()) return;
 
@@ -144,7 +148,7 @@
                     $('.square-55d63').removeClass('highlight-last');
                     $('.square-'+move.from+', .square-'+move.to).addClass('highlight-last');
                     
-                    $('#status-bar').text("SYSTEM: CALCULATING...");
+                    $('#status-bar').text("SYSTEM: ANALYZING...");
                     engine.postMessage('position fen ' + game.fen());
                     engine.postMessage('go movetime 1000'); 
                     getAICommentary(move.san, true);
@@ -153,37 +157,20 @@
             }
         }
 
-        engine.onmessage = function(e) {
-            if (e.data.startsWith('bestmove')) {
-                var m = e.data.split(' ')[1];
-                if (m && m !== '(none)') {
-                    var move = game.move({ from: m.substring(0, 2), to: m.substring(2, 4), promotion: 'q' });
-                    board.position(game.fen());
-                    $('.square-55d63').removeClass('highlight-last');
-                    $('.square-'+move.from+', .square-'+move.to).addClass('highlight-last');
-                    
-                    $('#status-bar').text("SYSTEM: YOUR TURN");
-                    getAICommentary(move.san, false);
-                }
-            }
-        };
+        $(document).ready(function() {
+            window.board = Chessboard('board', { 
+                position: 'start', draggable: false, 
+                pieceTheme: 'https://chessboardjs.com/img/chesspieces/wikipedia/{piece}.png' 
+            });
+            $(document).on('click', '.square-55d63', onSquareClick);
+            initAI();
+        });
 
         $('#undoBtn').on('click', function() {
             game.undo(); game.undo(); 
             board.position(game.fen());
             $('.square-55d63').removeClass('highlight-last');
-            sourceSquare = null;
-            speak("Reverting neural sequence. Let's try that again!");
-        });
-
-        $(document).ready(function() {
-            board = Chessboard('board', { 
-                position: 'start', 
-                draggable: false, 
-                pieceTheme: 'https://chessboardjs.com/img/chesspieces/wikipedia/{piece}.png' 
-            });
-            $(document).on('click', '.square-55d63', onSquareClick);
-            initAI();
+            speak("Time-loop sequence engaged. Moves reversed.");
         });
     </script>
 </body>
