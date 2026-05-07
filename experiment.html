@@ -61,28 +61,24 @@
     <script src="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>
 
-    <!-- We use type="module" only for the WebLLM parts, but keep engine global -->
     <script type="module">
         import * as webllm from "https://esm.run/@mlc-ai/web-llm";
 
-        // Global variables for the game state
+        // Global State
         window.board = null;
         window.game = new Chess();
         window.sourceSquare = null;
         window.llm = null;
+        window.isAiThinking = false;
 
-        // Initialize Local Stockfish (Using your exact file name)
+        // Initialize Local Stockfish
         window.engine = new Worker('./stockfish-18-lite-single.js');
-
-        // Engine Handshake
         engine.postMessage('uci');
         engine.postMessage('setoption name UCI_LimitStrength value true');
-        engine.postMessage('setoption name UCI_Elo value 1800'); // Higher for Experimental bot
+        engine.postMessage('setoption name UCI_Elo value 1800');
         engine.postMessage('isready');
 
-        // Engine Response Logic
         engine.onmessage = function(e) {
-            console.log("Stockfish:", e.data); // Helpful for debugging
             if (e.data.startsWith('bestmove')) {
                 var m = e.data.split(' ')[1];
                 if (m && m !== '(none)') {
@@ -97,18 +93,18 @@
         };
 
         async function initAI() {
-            // This is the standard Gemma 2b Instruct model for WebLLM
-            const modelId = "gemma-2b-it-q4f16_1-MLC";
+            const modelId = "gemma-2b-it-q4f16_1-MLC"; 
             try {
                 window.llm = await webllm.CreateMLCEngine(modelId, {
                     initProgressCallback: (p) => {
-                        $('#status-bar').text(`LOADING PERSONALITY: ${Math.round(p.progress * 100)}%`);
+                        $('#status-bar').text(`LOADING BRAIN: ${Math.round(p.progress * 100)}%`);
                     }
                 });
                 $('#status-bar').text("SYSTEM: ONLINE");
                 speak("Experimental Bot active. Ready to process moves.");
             } catch (e) {
-                $('#status-bar').text("SYSTEM: PERSONALITY OFFLINE");
+                $('#status-bar').text("SYSTEM: BRAIN OFFLINE");
+                console.error(e);
             }
         }
 
@@ -117,29 +113,36 @@
             $('#chat-window').scrollTop($('#chat-window')[0].scrollHeight);
         }
 
-      async function getAICommentary(moveSan, isPlayer) {
-    if (!window.llm) return;
+        async function getAICommentary(moveSan, isPlayer) {
+            if (!window.llm || isAiThinking) return;
+            isAiThinking = true;
 
-    const response = await llm.chat.completions.create({
-        messages: [
-            { 
-                role: "system", 
-                content: `You are the Tim Chess Experimental Bot, a friendly chess player. You are playing BLACK. The user is WHITE. 
-                Keep it to one short sentence. Be a friendly rival. No tech jargon.` 
-            },
-            { 
-                role: "user", 
-                content: isPlayer 
-                    ? `I (White) just played ${moveSan}. What do you think?` 
-                    : `You (Black) just played ${moveSan}. Tell me why you like that move.` 
+            try {
+                const response = await llm.chat.completions.create({
+                    messages: [
+                        { 
+                            role: "system", 
+                            content: "You are Tim, a friendly chess rival. You are playing BLACK. The user is WHITE. Respond in one short, non-technical sentence. Do not give advice or call moves mistakes." 
+                        },
+                        { 
+                            role: "user", 
+                            content: isPlayer ? `White moved ${moveSan}.` : `I moved ${moveSan}.` 
+                        }
+                    ],
+                    temperature: 0.7,
+                    max_tokens: 40,
+                    stop: ["\n", "User:", "White:", "Black:"]
+                });
+
+                let text = response.choices[0].message.content.trim();
+                text = text.replace(/^(Tim:|Black:|White:)/i, "").trim();
+                if (text) speak(text);
+            } catch (e) {
+                console.error("AI Error:", e);
+            } finally {
+                isAiThinking = false;
             }
-        ],
-        temperature: 0.7, // Gemma handles this temperature well
-        max_tokens: 32
-    });
-
-    speak(response.choices[0].message.content);
-}
+        }
 
         window.onSquareClick = function() {
             var square = $(this).attr('data-square');
@@ -183,7 +186,7 @@
             game.undo(); game.undo(); 
             board.position(game.fen());
             $('.square-55d63').removeClass('highlight-last');
-            speak("Time-loop sequence engaged. Moves reversed.");
+            speak("Moves reversed. Let's try that again.");
         });
     </script>
 </body>
