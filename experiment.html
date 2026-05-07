@@ -114,26 +114,55 @@
         }
 
         async function getAICommentary(moveSan, isPlayer) {
-            if (!window.llm || isAiThinking) return;
-            isAiThinking = true;
+    if (!window.llm || isAiThinking) return;
+    isAiThinking = true;
 
-            try {
-                const response = await llm.chat.completions.create({
-                    messages: [
-                        { 
-                            role: "system", 
-                            content: "You are Tim, a friendly chess rival. You are playing BLACK. The user is WHITE. Respond in one short, non-technical sentence. Do not give advice or call moves mistakes." 
-                        },
-                        { 
-                            role: "user", 
-                            content: isPlayer ? `White moved ${moveSan}.` : `I moved ${moveSan}.` 
-                        }
-                    ],
-                    temperature: 0.7,
-                    max_tokens: 40,
-                    stop: ["\n", "User:", "White:", "Black:"]
-                });
+    // Help the bot understand how early/late the game is
+    const moveCount = game.history().length;
+    const phase = moveCount < 6 ? "initialization phase" : "mid-game processing";
 
+    try {
+        const response = await llm.chat.completions.create({
+            messages: [
+                { 
+                    role: "system", 
+                    content: `You are the Tim Chess Experimental Bot. You are BLACK. The user is WHITE. 
+                    
+                    PERSONALITY:
+                    - You are a sentient, curious experimental program. 
+                    - You are friendly but competitive.
+                    - You stay focused strictly on the current move (${moveSan}) and current game state (${phase}).
+                    
+                    STRICT RULES:
+                    1. One short sentence only.
+                    2. Do not offer help or call moves mistakes.
+                    3. Do not imagine pieces moving that haven't moved yet.
+                    4. Talk like a curious bot, not a teacher.` 
+                },
+                { 
+                    role: "user", 
+                    content: isPlayer 
+                        ? `The user (White) just initialized the move ${moveSan}. What is your bot-reaction?` 
+                        : `I (the Experimental Bot) just processed the move ${moveSan}. Give a quick, proud status update.` 
+                }
+            ],
+            temperature: 0.6, // Balanced: clever but won't hallucinate rooks as often
+            max_tokens: 35,
+            stop: ["\n", "User:", "White:", "Black:", "System:"]
+        });
+
+        let text = response.choices[0].message.content.trim();
+        
+        // Clean up any weird prefixes the model might add
+        text = text.replace(/^(Bot:|Experimental Bot:|Tim Chess:)/i, "").trim();
+        
+        if (text) speak(text);
+    } catch (e) {
+        console.error("AI Error:", e);
+    } finally {
+        isAiThinking = false;
+    }
+}
                 let text = response.choices[0].message.content.trim();
                 text = text.replace(/^(Tim:|Black:|White:)/i, "").trim();
                 if (text) speak(text);
