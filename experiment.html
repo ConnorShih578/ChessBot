@@ -10,7 +10,7 @@
         #game-container { display: flex; flex-wrap: wrap; justify-content: center; gap: 20px; width: 100%; max-width: 1000px; }
         #board { width: 450px; border: 3px solid var(--accent); box-shadow: 0 0 20px var(--terminal); }
         #sidebar { width: 380px; height: 450px; background: #111; padding: 20px; display: flex; flex-direction: column; border: 1px solid var(--accent); box-sizing: border-box; }
-        #chat-window { flex: 1; background: #000; padding: 12px; overflow-y: auto; border: 1px solid #222; font-size: 0.9em; margin-bottom: 15px; }
+        #chat-window { flex: 1; background: #000; padding: 12px; overflow-y: auto; border: 1px solid #222; font-size: 0.9em; margin-bottom: 15px; color: #00ff41; }
         .bubble { margin-bottom: 10px; border-left: 2px solid var(--accent); padding-left: 10px; line-height: 1.4; }
         #status { font-size: 0.75em; color: var(--accent); margin-bottom: 8px; text-transform: uppercase; letter-spacing: 1px; }
         .controls { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
@@ -21,7 +21,7 @@
 </head>
 <body>
 
-    <h1 style="margin-bottom: 20px;">TIM_CHESS_EXPERIMENTAL_v3.2</h1>
+    <h1 style="margin-bottom: 20px;">TIM_CHESS_v3.4_ANALYTICAL</h1>
 
     <div id="game-container">
         <div id="board"></div>
@@ -50,7 +50,6 @@
         let isThinking = false;
         let chatHistory = [];
 
-        // 1. Engine setup
         const sf = new Worker('./stockfish-18-lite-single.js');
         sf.postMessage('uci');
         sf.postMessage('setoption name UCI_Elo value 1400');
@@ -68,12 +67,11 @@
             }
         };
 
-        // 2. Initialize Lightweight AI
         async function initAI() {
             try {
                 const modelId = "SmolLM2-360M-Instruct-q4f16_1-MLC";
                 llm = await webllm.CreateMLCEngine(modelId, {
-                    initProgressCallback: (p) => $('#status').text(`DOWNLOADING_BRAIN: ${Math.round(p.progress * 100)}%`)
+                    initProgressCallback: (p) => $('#status').text(`LOADING_BRAIN: ${Math.round(p.progress * 100)}%`)
                 });
                 $('#status').text("SYSTEM: ONLINE");
             } catch (err) {
@@ -85,38 +83,52 @@
             $('#chat-window').append(`<div class="bubble">> ${text}</div>`).scrollTop(9999);
         }
 
-        // 3. AI Commentary with Identity Guard
         async function getAIResponse(move, isUser) {
             if (!llm || isThinking) return;
             isThinking = true;
 
+            // PERSONA RANDOMIZER: We pick a different "vibe" for each move to prevent repetition
+            const vibes = [
+                "Focus on the tactical pressure of this move.",
+                "Describe the geometric logic of the piece placement.",
+                "Comment on the psychological tension created by this move.",
+                "Describe this move using futuristic system diagnostics jargon.",
+                "Be dismissive but technically descriptive of this position."
+            ];
+            const currentVibe = vibes[Math.floor(Math.random() * vibes.length)];
+
             const userPrompt = isUser 
-                ? `The human opponent played ${move.san}. How do you react to this move?` 
-                : `You (the Tim Chess Experimental Bot) just played ${move.san}. What is your status update?`;
+                ? `Analyze Human Move: ${move.san}. ${currentVibe}` 
+                : `Analyze My Move: ${move.san}. ${currentVibe}`;
 
             chatHistory.push({ role: "user", content: userPrompt });
-            if (chatHistory.length > 6) chatHistory.shift();
+            if (chatHistory.length > 4) chatHistory.shift();
 
             try {
                 const res = await llm.chat.completions.create({
                     messages: [
                         { 
                             role: "system", 
-                            content: "You are the Tim Chess Experimental Bot. You are competitive and witty. CRITICAL: Never start your response with 'Human played' or 'I played'. Respond with one short unique sentence only. Do not repeat history." 
+                            content: `You are the Tim Chess Experimental Bot. 
+                            GOAL: Provide a fresh, descriptive, high-tech analysis.
+                            RULES: 
+                            1. Use ONE sentence. 
+                            2. NEVER use the words 'solid', 'technically sound', or 'aggressive'. 
+                            3. Use diverse vocabulary like 'spatial', 'leverage', 'grid-lock', 'optimization', or 'vulnerability'.` 
                         },
                         ...chatHistory
                     ],
-                    temperature: 0.6,
-                    max_tokens: 30
+                    temperature: 0.8, // Keep it high for descriptive variety
+                    presence_penalty: 1.2, 
+                    frequency_penalty: 1.2,
+                    max_tokens: 40
                 });
 
                 let reply = res.choices[0].message.content.trim();
                 
-                // Response Sanitizer: Cut off the bot if it starts hallucinating its name or history
+                // Clean up any prefixes or hallucinations
                 reply = reply.split('\n')[0];
-                reply = reply.replace(/^(Tim Chess Experimental Bot:|Tim:|Bot:|Human played|I played|>)/i, "").trim();
-
-                if (reply.length < 3) reply = "Processing that move... intriguing choice.";
+                reply = reply.replace(/^(Tim:|Bot:|Human|>)/i, "").trim();
 
                 addMessage(reply);
                 chatHistory.push({ role: "assistant", content: reply });
@@ -140,7 +152,6 @@
                 onDrop: (source, target) => {
                     const move = game.move({ from: source, to: target, promotion: 'q' });
                     if (!move) return 'snapback';
-
                     updateHighlight(move);
                     sf.postMessage(`position fen ${game.fen()}`);
                     sf.postMessage('go movetime 700');
@@ -154,8 +165,8 @@
         $('#undoBtn').click(() => {
             game.undo(); game.undo();
             board.position(game.fen());
-            chatHistory.length = 0; // Fresh memory after an undo to avoid pattern-locking
-            addMessage("Logical reversal: Memory systems cleared.");
+            chatHistory = [];
+            addMessage("MEMORY PURGED. RETURNING TO PREVIOUS STATE.");
         });
     </script>
 </body>
