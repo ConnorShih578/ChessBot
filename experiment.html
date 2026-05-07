@@ -83,11 +83,11 @@
                 
                 $('#status-bar').text("SYSTEM: ONLINE");
                 
-                // Greeting Prompt: Set personality and introduce technology
+                // Greeting Prompt: Identify as Tim Chess Bot powered by QianWen
                 const greeting = await llm.chat.completions.create({
                     messages: [
-                        { role: "system", content: "You are a 3000 ELO chess mentor who is polite and knowledgeable. Your specialty is explaining how WebLLM (running on the GPU), Stockfish (the engine), and HTML/JS work together to create this game. Introduce yourself and mention one cool fact about in-browser AI." },
-                        { role: "user", content: "The game is starting. Say hello." }
+                        { role: "system", content: "You are the experimental bot for Tim Chess. You are powered by the QianWen (Qwen) AI model via WebLLM. You are a polite, expert chess mentor. Introduce yourself by name and mention that you are running locally in the browser thanks to QianWen and WebGPU." },
+                        { role: "user", content: "Introduce yourself." }
                     ]
                 });
                 speak(greeting.choices[0].message.content);
@@ -105,11 +105,10 @@
 
         async function getAICommentary(move) {
             if (!llm) return;
-            // Commentary Prompt: High ELO + Tech Talk
             const response = await llm.chat.completions.create({
                 messages: [
-                    { role: "system", content: "You are a polite 3000 ELO chess expert. React to the user's move. Occasionally relate the move or the board state to a concept in WebLLM, Stockfish logic, or HTML programming. Keep it to one or two sentences." },
-                    { role: "user", content: `The player just moved ${move}. Board FEN: ${game.fen()}` }
+                    { role: "system", content: "You are the experimental bot for Tim Chess, powered by QianWen. Comment briefly on the move I just made. Always remain in character as the Tim Chess Bot." },
+                    { role: "user", content: `I just moved ${move}. The current FEN is ${game.fen()}.` }
                 ]
             });
             speak(response.choices[0].message.content);
@@ -122,8 +121,10 @@
 
             $('#status-bar').text("SYSTEM: PROCESSING...");
             
+            // Fix: Standard handshake to ensure Stockfish responds
+            engine.postMessage('ucinewgame');
             engine.postMessage('position fen ' + game.fen());
-            engine.postMessage('go depth 10');
+            engine.postMessage('go depth 12');
             
             getAICommentary(move.san);
         }
