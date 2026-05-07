@@ -97,7 +97,8 @@
         };
 
         async function initAI() {
-            const modelId = "Qwen2.5-0.5B-Instruct-q4f16_1-MLC";
+            // This is the standard Gemma 2b Instruct model for WebLLM
+            const modelId = "gemma-2b-it-q4f16_1-MLC";
             try {
                 window.llm = await webllm.CreateMLCEngine(modelId, {
                     initProgressCallback: (p) => {
