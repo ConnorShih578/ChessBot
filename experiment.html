@@ -27,6 +27,10 @@
         <div id="board"></div>
         <div id="sidebar">
             <div id="status">INITIALIZING_SYSTEM...</div>
+            <div id="api-key-container" style="margin-bottom: 12px; display: flex; gap: 8px;">
+                <input type="password" id="apiKeyInput" placeholder="ENTER_GEMINI_API_KEY" style="flex: 1; background: #000; color: var(--text); border: 1px solid var(--accent); padding: 8px; font-family: inherit; font-size: 0.85em; outline: none; border-radius: 2px;">
+                <button id="saveKeyBtn" style="padding: 8px 12px; font-size: 0.85em;">SET</button>
+            </div>
             <div id="chat-window">
                 <div class="bubble">> NEURAL LINK STANDBY.</div>
             </div>
@@ -42,11 +46,10 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>
 
     <script type="module">
-        import * as webllm from "https://esm.run/@mlc-ai/web-llm";
+        import { GoogleGenAI, ThinkingLevel } from "https://esm.sh/@google/genai";
 
         const game = new Chess();
         let board = null;
-        let llm = null;
         let isThinking = false;
         let chatHistory = [];
 
@@ -67,73 +70,102 @@
             }
         };
 
-        async function initAI() {
-            try {
-                const modelId = "SmolLM2-360M-Instruct-q4f16_1-MLC";
-                llm = await webllm.CreateMLCEngine(modelId, {
-                    initProgressCallback: (p) => $('#status').text(`LOADING_BRAIN: ${Math.round(p.progress * 100)}%`)
-                });
+        function initAI() {
+            const savedKey = localStorage.getItem('gemini_api_key') || '';
+            if (savedKey) {
+                $('#apiKeyInput').val(savedKey);
                 $('#status').text("SYSTEM: ONLINE");
-            } catch (err) {
-                $('#status').text("SYSTEM: CORE_FAILURE");
+            } else {
+                $('#status').text("SYSTEM: ENTER API KEY");
             }
         }
+
+        function saveApiKey() {
+            const key = $('#apiKeyInput').val().trim();
+            if (key) {
+                localStorage.setItem('gemini_api_key', key);
+                $('#status').text("SYSTEM: ONLINE");
+                addMessage("API KEY UPDATED. SYSTEM ONLINE.");
+            } else {
+                localStorage.removeItem('gemini_api_key');
+                $('#status').text("SYSTEM: ENTER API KEY");
+                addMessage("API KEY REMOVED. SYSTEM OFFLINE.");
+            }
+        }
+
+        $('#saveKeyBtn').click(saveApiKey);
+        $('#apiKeyInput').keypress((e) => {
+            if (e.which === 13) {
+                saveApiKey();
+            }
+        });
 
         function addMessage(text) {
             $('#chat-window').append(`<div class="bubble">> ${text}</div>`).scrollTop(9999);
         }
 
         async function getAIResponse(move, isUser) {
-            if (!llm || isThinking) return;
+            const apiKey = localStorage.getItem('gemini_api_key') || '';
+            if (!apiKey) {
+                $('#status').text("SYSTEM: ENTER API KEY");
+                addMessage("ERROR: Please enter your Gemini API Key in the field above to start the neural link.");
+                return;
+            }
+
+            if (isThinking) return;
             isThinking = true;
 
-            // PERSONA RANDOMIZER: We pick a different "vibe" for each move to prevent repetition
-            const vibes = [
-                "Focus on the tactical pressure of this move.",
-                "Describe the geometric logic of the piece placement.",
-                "Comment on the psychological tension created by this move.",
-                "Describe this move using futuristic system diagnostics jargon.",
-                "Be dismissive but technically descriptive of this position."
-            ];
-            const currentVibe = vibes[Math.floor(Math.random() * vibes.length)];
+            const inputPrompt = isUser ? `HUMAN: ${move.san}` : `STOCKFISH: ${move.san}`;
+            chatHistory.push({
+                role: 'user',
+                parts: [{ text: inputPrompt }]
+            });
 
-            const userPrompt = isUser 
-                ? `Analyze Human Move: ${move.san}. ${currentVibe}` 
-                : `Analyze My Move: ${move.san}. ${currentVibe}`;
-
-            chatHistory.push({ role: "user", content: userPrompt });
-            if (chatHistory.length > 4) chatHistory.shift();
+            const bubbleId = `msg-${Date.now()}`;
+            $('#chat-window').append(`<div class="bubble" id="${bubbleId}">> <span style="color: var(--accent);">Thinking...</span></div>`).scrollTop(9999);
 
             try {
-                const res = await llm.chat.completions.create({
-                    messages: [
-                        { 
-                            role: "system", 
-                            content: `You are the Tim Chess Experimental Bot. 
-                            GOAL: Provide a fresh, descriptive, high-tech analysis.
-                            RULES: 
-                            1. Use ONE sentence. 
-                            2. NEVER use the words 'solid', 'technically sound', or 'aggressive'. 
-                            3. Use diverse vocabulary like 'spatial', 'leverage', 'grid-lock', 'optimization', or 'vulnerability'.` 
+                const ai = new GoogleGenAI({ apiKey });
+                const response = await ai.models.generateContentStream({
+                    model: 'gemma-4-31b-it',
+                    config: {
+                        temperature: 0.7,
+                        thinkingConfig: {
+                            thinkingLevel: (typeof ThinkingLevel !== 'undefined' ? ThinkingLevel.MINIMAL : 'MINIMAL'),
                         },
-                        ...chatHistory
-                    ],
-                    temperature: 0.8, // Keep it high for descriptive variety
-                    presence_penalty: 1.2, 
-                    frequency_penalty: 1.2,
-                    max_tokens: 40
+                        systemInstruction: [
+                            {
+                                text: `You are the "voice" of a chess bot, when there are move inputs, react to it. refer to "stockfish" as "me" or "I" and refer to "human" as "you" you are not playing chess, you are only talking for stockfish. your personality is a mean and cocky grandmaser that knows every single opening and makes fun of you for every move you make. After "human" moves, it's "stockfish"s' turn. and vice versa. remember, "stockfish" is the ai (you), "human" is the player your talking to. IF THE INPUT HAS "STOCKFISH", THEN YOU EXPLAIN WHY "I" MADE THAT DECISION. IF THE INPUT HAS "HUMAN", TRASH TALK ABOUT WHY THAT MOVE IS BAD. \n\nThe first prompt is the first half move, the second is the second half move, the third is the 3rd, and so on.`
+                            }
+                        ]
+                    },
+                    contents: chatHistory
                 });
 
-                let reply = res.choices[0].message.content.trim();
-                
-                // Clean up any prefixes or hallucinations
-                reply = reply.split('\n')[0];
-                reply = reply.replace(/^(Tim:|Bot:|Human|>)/i, "").trim();
+                let fullText = "";
+                $(`#${bubbleId}`).html("> ");
 
-                addMessage(reply);
-                chatHistory.push({ role: "assistant", content: reply });
+                for await (const chunk of response) {
+                    if (chunk.text) {
+                        fullText += chunk.text;
+                        $(`#${bubbleId}`).text("> " + fullText);
+                        $('#chat-window').scrollTop(9999);
+                    }
+                }
+
+                if (!fullText) {
+                    $(`#${bubbleId}`).text("> (No response received)");
+                } else {
+                    chatHistory.push({
+                        role: 'model',
+                        parts: [{ text: fullText }]
+                    });
+                }
+
             } catch (e) {
                 console.error("AI Error:", e);
+                $(`#${bubbleId}`).text(`> ERROR: Failed to generate response. ${e.message}`);
+                chatHistory.pop(); // Remove the last user prompt since it failed
             } finally {
                 isThinking = false;
             }
@@ -165,8 +197,8 @@
         $('#undoBtn').click(() => {
             game.undo(); game.undo();
             board.position(game.fen());
-            chatHistory = [];
-            addMessage("MEMORY PURGED. RETURNING TO PREVIOUS STATE.");
+            chatHistory = chatHistory.slice(0, -4);
+            addMessage("MEMORY PARTIALLY PURGED. RETURNING TO PREVIOUS STATE.");
         });
     </script>
 </body>
