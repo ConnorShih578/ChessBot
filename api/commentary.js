@@ -13,26 +13,34 @@ export default async function handler(req, res) {
     }
 
     try {
-        const { history } = req.body;
+        const { history, apiKey } = req.body;
 
-        const aiOptions = {
-            vertexAI: true,
-            location: process.env.GCP_LOCATION || 'us-central1'
-        };
+        const aiOptions = {};
 
         if (process.env.GCP_SERVICE_ACCOUNT_KEY) {
+            let serviceAccount;
             try {
-                const serviceAccount = JSON.parse(process.env.GCP_SERVICE_ACCOUNT_KEY);
-                aiOptions.project = serviceAccount.project_id || process.env.GCP_PROJECT_ID || '927480480621';
-                aiOptions.googleAuth = {
-                    credentials: serviceAccount
-                };
+                serviceAccount = JSON.parse(process.env.GCP_SERVICE_ACCOUNT_KEY);
             } catch (err) {
-                console.error("Error parsing GCP_SERVICE_ACCOUNT_KEY:", err);
-                aiOptions.project = process.env.GCP_PROJECT_ID || '927480480621';
+                console.error("Error parsing GCP_SERVICE_ACCOUNT_KEY JSON:", err);
             }
-        } else {
-            aiOptions.project = process.env.GCP_PROJECT_ID || '927480480621';
+
+            if (serviceAccount) {
+                aiOptions.vertexAI = true;
+                aiOptions.project = serviceAccount.project_id || process.env.GCP_PROJECT_ID || '927480480621';
+                aiOptions.location = process.env.GCP_LOCATION || 'us-central1';
+                aiOptions.googleAuth = { credentials: serviceAccount };
+            }
+        }
+
+        // Fallback to API Key if Service Account is not set
+        if (!aiOptions.vertexAI) {
+            const keyToUse = apiKey || process.env.GCP_API_KEY;
+            if (keyToUse) {
+                aiOptions.apiKey = keyToUse;
+            } else {
+                return res.status(400).send('ERROR: Missing GCP_SERVICE_ACCOUNT_KEY in Vercel Environment Variables. Please add GCP_SERVICE_ACCOUNT_KEY in Vercel Settings and Redeploy.');
+            }
         }
 
         const ai = new GoogleGenAI(aiOptions);
