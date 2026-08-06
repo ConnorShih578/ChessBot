@@ -34,7 +34,7 @@ export default {
 
             const ai = new GoogleGenAI(aiOptions);
             const response = await ai.models.generateContentStream({
-                model: 'gemma-4-31b-it',
+                model: 'gemma-2-27b-it',
                 config: {
                     temperature: 0.7,
                     systemInstruction: [
