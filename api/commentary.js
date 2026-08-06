@@ -15,24 +15,24 @@ export default async function handler(req, res) {
     try {
         const { history } = req.body;
 
-        const GCP_PROJECT_ID = process.env.GCP_PROJECT_ID || '927480480621';
-        const GCP_LOCATION = process.env.GCP_LOCATION || 'us-central1';
-
         const aiOptions = {
             vertexAI: true,
-            project: GCP_PROJECT_ID,
-            location: GCP_LOCATION
+            location: process.env.GCP_LOCATION || 'us-central1'
         };
 
-        // Use Google Cloud Service Account Key if set in Vercel Environment Variables
         if (process.env.GCP_SERVICE_ACCOUNT_KEY) {
             try {
-                aiOptions.googleAuthOptions = {
-                    credentials: JSON.parse(process.env.GCP_SERVICE_ACCOUNT_KEY)
+                const serviceAccount = JSON.parse(process.env.GCP_SERVICE_ACCOUNT_KEY);
+                aiOptions.project = serviceAccount.project_id || process.env.GCP_PROJECT_ID || '927480480621';
+                aiOptions.googleAuth = {
+                    credentials: serviceAccount
                 };
             } catch (err) {
-                console.error("Failed to parse GCP_SERVICE_ACCOUNT_KEY JSON", err);
+                console.error("Error parsing GCP_SERVICE_ACCOUNT_KEY:", err);
+                aiOptions.project = process.env.GCP_PROJECT_ID || '927480480621';
             }
+        } else {
+            aiOptions.project = process.env.GCP_PROJECT_ID || '927480480621';
         }
 
         const ai = new GoogleGenAI(aiOptions);
