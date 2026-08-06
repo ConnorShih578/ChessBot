@@ -1,6 +1,8 @@
 {
   "cleanUrls": true,
-  "rewrites": [
-    { "source": "/", "destination": "/index.html" }
+  "routes": [
+    { "src": "/api/commentary", "dest": "/api/commentary.js" },
+    { "handle": "filesystem" },
+    { "src": "/(.*)", "dest": "/$1" }
   ]
 }
