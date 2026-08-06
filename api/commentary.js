@@ -13,19 +13,26 @@ export default async function handler(req, res) {
     }
 
     try {
-        const { history, apiKey } = req.body;
+        const { history } = req.body;
 
         const GCP_PROJECT_ID = process.env.GCP_PROJECT_ID || '927480480621';
         const GCP_LOCATION = process.env.GCP_LOCATION || 'us-central1';
-        const keyToUse = apiKey || process.env.GCP_API_KEY;
 
-        const aiOptions = {};
-        if (keyToUse) {
-            aiOptions.apiKey = keyToUse;
-        } else {
-            aiOptions.vertexAI = true;
-            aiOptions.project = GCP_PROJECT_ID;
-            aiOptions.location = GCP_LOCATION;
+        const aiOptions = {
+            vertexAI: true,
+            project: GCP_PROJECT_ID,
+            location: GCP_LOCATION
+        };
+
+        // Use Google Cloud Service Account Key if set in Vercel Environment Variables
+        if (process.env.GCP_SERVICE_ACCOUNT_KEY) {
+            try {
+                aiOptions.googleAuthOptions = {
+                    credentials: JSON.parse(process.env.GCP_SERVICE_ACCOUNT_KEY)
+                };
+            } catch (err) {
+                console.error("Failed to parse GCP_SERVICE_ACCOUNT_KEY JSON", err);
+            }
         }
 
         const ai = new GoogleGenAI(aiOptions);
@@ -52,7 +59,7 @@ export default async function handler(req, res) {
         }
         res.end();
     } catch (error) {
-        console.error('Vercel Function Error:', error);
+        console.error('Vertex AI Error:', error);
         res.status(500).send(`ERROR: ${error.message}`);
     }
 }
