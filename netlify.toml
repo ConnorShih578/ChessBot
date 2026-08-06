@@ -1,0 +1,7 @@
+[build]
+  functions = "netlify/functions"
+
+[[redirects]]
+  from = "/api/commentary"
+  to = "/.netlify/functions/commentary"
+  status = 200

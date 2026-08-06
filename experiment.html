@@ -46,7 +46,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>
 
     <script type="module">
-        import { GoogleGenAI, ThinkingLevel } from "https://esm.sh/@google/genai";
+        import { GoogleGenAI } from "https://esm.sh/@google/genai";
 
         const game = new Chess();
         let board = null;
@@ -69,6 +69,10 @@
                 }
             }
         };
+
+        function getEffectiveApiKey() {
+            return localStorage.getItem('gemini_api_key') || '';
+        }
 
         function initAI() {
             const savedKey = localStorage.getItem('gemini_api_key') || '';
@@ -105,12 +109,7 @@
         }
 
         async function getAIResponse(move, isUser) {
-            const apiKey = localStorage.getItem('gemini_api_key') || '';
-            if (!apiKey) {
-                $('#status').text("SYSTEM: ENTER API KEY");
-                addMessage("ERROR: Please enter your Gemini API Key in the field above to start the neural link.");
-                return;
-            }
+            const apiKey = getEffectiveApiKey();
 
             if (isThinking) return;
             isThinking = true;
@@ -125,32 +124,24 @@
             $('#chat-window').append(`<div class="bubble" id="${bubbleId}">> <span style="color: var(--accent);">Thinking...</span></div>`).scrollTop(9999);
 
             try {
-                const ai = new GoogleGenAI({ apiKey });
-                const response = await ai.models.generateContentStream({
-                    model: 'gemma-4-31b-it',
-                    config: {
-                        temperature: 0.7,
-                        thinkingConfig: {
-                            thinkingLevel: (typeof ThinkingLevel !== 'undefined' ? ThinkingLevel.MINIMAL : 'MINIMAL'),
-                        },
-                        systemInstruction: [
-                            {
-                                text: `You are the "voice" of a chess bot, when there are move inputs, react to it. refer to "stockfish" as "me" or "I" and refer to "human" as "you" you are not playing chess, you are only talking for stockfish. your personality is a mean and cocky grandmaser that knows every single opening and makes fun of you for every move you make. After "human" moves, it's "stockfish"s' turn. and vice versa. remember, "stockfish" is the ai (you), "human" is the player your talking to. IF THE INPUT HAS "STOCKFISH", THEN YOU EXPLAIN WHY "I" MADE THAT DECISION. IF THE INPUT HAS "HUMAN", TRASH TALK ABOUT WHY THAT MOVE IS BAD. \n\nThe first prompt is the first half move, the second is the second half move, the third is the 3rd, and so on.`
-                            }
-                        ]
-                    },
-                    contents: chatHistory
+                const response = await fetch('/api/commentary', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ history: chatHistory, apiKey })
                 });
 
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder();
                 let fullText = "";
                 $(`#${bubbleId}`).html("> ");
 
-                for await (const chunk of response) {
-                    if (chunk.text) {
-                        fullText += chunk.text;
-                        $(`#${bubbleId}`).text("> " + fullText);
-                        $('#chat-window').scrollTop(9999);
-                    }
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+                    const chunk = decoder.decode(value, { stream: true });
+                    fullText += chunk;
+                    $(`#${bubbleId}`).text("> " + fullText);
+                    $('#chat-window').scrollTop(9999);
                 }
 
                 if (!fullText) {
@@ -165,7 +156,7 @@
             } catch (e) {
                 console.error("AI Error:", e);
                 $(`#${bubbleId}`).text(`> ERROR: Failed to generate response. ${e.message}`);
-                chatHistory.pop(); // Remove the last user prompt since it failed
+                chatHistory.pop();
             } finally {
                 isThinking = false;
             }
