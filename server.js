@@ -23,16 +23,14 @@ app.post('/api/commentary', async (req, res) => {
     res.setHeader('Transfer-Encoding', 'chunked');
 
     try {
-        const aiOptions = {
-            vertexAI: true,
-            project: GCP_PROJECT_ID,
-            location: GCP_LOCATION,
-        };
-        
-        // Pass API key if provided by user or environment
+        const aiOptions = {};
         const keyToUse = apiKey || process.env.GCP_API_KEY;
         if (keyToUse) {
             aiOptions.apiKey = keyToUse;
+        } else {
+            aiOptions.vertexAI = true;
+            aiOptions.project = GCP_PROJECT_ID;
+            aiOptions.location = GCP_LOCATION;
         }
 
         const ai = new GoogleGenAI(aiOptions);

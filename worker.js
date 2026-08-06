@@ -23,13 +23,13 @@ export default {
             const GCP_LOCATION = env.GCP_LOCATION || 'us-central1';
             const keyToUse = apiKey || env.GCP_API_KEY;
 
-            const aiOptions = {
-                vertexAI: true,
-                project: GCP_PROJECT_ID,
-                location: GCP_LOCATION,
-            };
+            const aiOptions = {};
             if (keyToUse) {
                 aiOptions.apiKey = keyToUse;
+            } else {
+                aiOptions.vertexAI = true;
+                aiOptions.project = GCP_PROJECT_ID;
+                aiOptions.location = GCP_LOCATION;
             }
 
             const ai = new GoogleGenAI(aiOptions);
