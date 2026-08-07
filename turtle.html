@@ -114,7 +114,8 @@
 
         engine.postMessage('uci');
         engine.postMessage('setoption name UCI_LimitStrength value true');
-        engine.postMessage('setoption name UCI_Elo value 1450');
+        engine.postMessage('setoption name UCI_Elo value 1200');
+        engine.postMessage('setoption name Skill Level value 5');
 
         function speak(text) {
             $('#chat-window').append(`<div class="bubble">${text}</div>`);
