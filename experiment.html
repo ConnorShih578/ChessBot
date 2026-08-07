@@ -57,14 +57,15 @@
         sf.postMessage('uci');
         sf.postMessage('setoption name UCI_Elo value 1400');
 
-        sf.onmessage = (e) => {
+        sf.onmessage = async (e) => {
             if (e.data.startsWith('bestmove')) {
                 const moveStr = e.data.split(' ')[1];
                 if (moveStr && moveStr !== '(none)') {
                     const move = game.move({ from: moveStr.slice(0, 2), to: moveStr.slice(2, 4), promotion: 'q' });
                     board.position(game.fen());
                     updateHighlight(move);
-                    getAIResponse(move, false);
+                    $('#status').text("SYSTEM: COMMENTATING...");
+                    await getAIResponse(move, false);
                     $('#status').text("SYSTEM: YOUR TURN");
                 }
             }
@@ -172,14 +173,15 @@
                 position: 'start',
                 draggable: true,
                 pieceTheme: 'https://chessboardjs.com/img/chesspieces/wikipedia/{piece}.png',
-                onDrop: (source, target) => {
+                onDrop: async (source, target) => {
                     const move = game.move({ from: source, to: target, promotion: 'q' });
                     if (!move) return 'snapback';
                     updateHighlight(move);
+                    $('#status').text("SYSTEM: COMMENTATING...");
+                    await getAIResponse(move, true);
+                    $('#status').text("SYSTEM: STOCKFISH THINKING...");
                     sf.postMessage(`position fen ${game.fen()}`);
                     sf.postMessage('go movetime 700');
-                    getAIResponse(move, true);
-                    $('#status').text("SYSTEM: ANALYZING...");
                 }
             });
             initAI();
