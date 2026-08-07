@@ -95,7 +95,7 @@
     <script src="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>
     <script>
-        var board = null, game = new Chess(), engine = new Worker('./stockfish-18-lite-single.js'), sourceSquare = null, currentEval = 0.0;
+        var board = null, game = new Chess(), engine = new Worker('./stockfish-18-lite-single.js'), sourceSquare = null, isThinking = false, chatHistory = [];
         engine.postMessage('uci'); engine.postMessage('setoption name UCI_LimitStrength value true'); engine.postMessage('setoption name UCI_Elo value 950');
 
         function speak(text) {
@@ -103,57 +103,63 @@
             $('#chat-window').scrollTop($('#chat-window')[0].scrollHeight);
         }
 
-        const frogQuotes = {
-            thinking: [
-                "Wibbit... thinking...", 
-                "Searching for fwies...", 
-                "Contempwating the wiwypad...",
-                "Staring intenswy at a bug...",
-                "Hop... hop... thinking...",
-                "Wait! A dwagonfwy! Oh, right, chess."
-            ],
-            winning: [
-                "I'm the king of the pond! Wibbit!",
-                "You're stuck in the mud now!",
-                "My gween machine is unstoppabwe!",
-                "Tasty moves! Like a cwunchy beetle!",
-                "You're pwaying wike a toad!"
-            ],
-            losing: [
-                "Oh no! My wiwypad is sinking!",
-                "Is it waining? I can't concentwate!",
-                "That move was mean! Wibbit!",
-                "I think my tongue is stuck...",
-                "Would you wike to dwaw? I have mate in two by the way."
-            ],
-            neutral: [
-                "Wibbit.", 
-                "Wibbit. Who's winning?",
-                "Do you have any snacks? Wibbit.",
-                "Is it my turn yet? I was napping.",
-                "The pond is quiet today.",
-                "I wike your pieces. Can I eat the knight?"
-            ],
-            victory: [
-                "WIBBIT! THE POND IS MINE!", 
-                "Checkmate! I'm the gweatest!",
-                "I win! Time to go swimming!",
-                "Gween Fwog is the champion of the univewse!"
-            ]
-        };
+        async function getAIResponse(move, isUser) {
+            if (isThinking) return;
+            isThinking = true;
 
-        function getFrogTalk(eval) {
-            let cat = 'neutral';
-            if (eval > 1.5) cat = 'winning';
-            else if (eval < -1.5) cat = 'losing';
-            const list = frogQuotes[cat];
-            return list[Math.floor(Math.random() * list.length)];
+            const inputPrompt = isUser ? `HUMAN: ${move.san}` : `FWOG: ${move.san}`;
+            chatHistory.push({
+                role: 'user',
+                parts: [{ text: inputPrompt }]
+            });
+
+            const bubbleId = `msg-${Date.now()}`;
+            $('#chat-window').append(`<div class="bubble" id="${bubbleId}">Wibbit... <span style="color: var(--fwog-dark);">thinking...</span></div>`);
+            $('#chat-window').scrollTop($('#chat-window')[0].scrollHeight);
+
+            try {
+                const response = await fetch('/api/commentary', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ history: chatHistory, bot: 'gween_fwog' })
+                });
+
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder();
+                let fullText = "";
+                $(`#${bubbleId}`).html("");
+
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+                    const chunk = decoder.decode(value, { stream: true });
+                    fullText += chunk;
+                    $(`#${bubbleId}`).text(fullText);
+                    $('#chat-window').scrollTop($('#chat-window')[0].scrollHeight);
+                }
+
+                if (!fullText) {
+                    $(`#${bubbleId}`).text("Wibbit! (No response received)");
+                } else {
+                    chatHistory.push({
+                        role: 'model',
+                        parts: [{ text: fullText }]
+                    });
+                }
+
+            } catch (e) {
+                console.error("AI Error:", e);
+                $(`#${bubbleId}`).text(`Wibbit! ERROR: ${e.message}`);
+                chatHistory.pop();
+            } finally {
+                isThinking = false;
+            }
         }
 
         function triggerCheat() {
             const history = game.history({ verbose: true });
             const lastMove = history[history.length - 1];
-            speak("You Checkmate Me? I THINK NOT!");
+            speak("You Checkmate Me? I THINK NOT! WIBBIT!");
             setTimeout(() => {
                 game.remove(lastMove.to); game.load(game.fen()); board.position(game.fen());
                 speak("There. Much better. My turn! Wibbit!");
@@ -163,7 +169,7 @@
             }, 600);
         }
 
-        function onSquareClick() {
+        async function onSquareClick() {
             var square = $(this).attr('data-square');
             if (game.game_over()) return;
             if (sourceSquare === null) {
@@ -181,7 +187,7 @@
                     $('.square-55d63').removeClass('highlight-last');
                     $('.square-'+move.from+', .square-'+move.to).addClass('highlight-last');
                     if (game.in_checkmate()) { triggerCheat(); return; }
-                    speak(frogQuotes.thinking[Math.floor(Math.random() * frogQuotes.thinking.length)]);
+                    await getAIResponse(move, true);
                     engine.postMessage('position fen ' + game.fen());
                     engine.postMessage('go movetime 100');
                 }
@@ -189,11 +195,7 @@
             }
         }
 
-        engine.onmessage = function(e) {
-            if (e.data.includes('score cp')) {
-                let score = parseInt(e.data.split('cp ')[1].split(' ')[0]);
-                currentEval = (game.turn() === 'b' ? score : -score) / 100;
-            }
+        engine.onmessage = async function(e) {
             if (e.data.startsWith('bestmove')) {
                 var m = e.data.split(' ')[1];
                 var move = game.move({ from: m.substring(0, 2), to: m.substring(2, 4), promotion: 'q' });
@@ -201,17 +203,18 @@
                 $('.square-55d63').removeClass('highlight-last');
                 $('.square-'+move.from+', .square-'+move.to).addClass('highlight-last');
                 if (game.in_checkmate()) { 
-                    speak(frogQuotes.victory[Math.floor(Math.random() * frogQuotes.victory.length)]); 
+                    speak("WIBBIT! THE POND IS MINE! CHECKMATE!"); 
                     $('#board').addClass('victory-shake'); 
                 }
                 else {
-                    speak(getFrogTalk(currentEval));
+                    await getAIResponse(move, false);
                 }
             }
         };
 
         $('#undoBtn').on('click', function() {
             game.undo(); game.undo(); board.position(game.fen());
+            chatHistory = chatHistory.slice(0, -4);
             speak("Wibbit! A do-over? I saw that!");
         });
 
