@@ -4,6 +4,7 @@ import martinaHandler from './commentary-martina.js';
 import turtleHandler from './commentary-turtle.js';
 import cooperHandler from './commentary-cooper.js';
 import timmyHandler from './commentary-timmy.js';
+import antigravityHandler from './commentary-antigravity.js';
 
 export default async function handler(req, res) {
     const bot = req.body?.bot;
@@ -12,5 +13,6 @@ export default async function handler(req, res) {
     if (bot === 'turtle' || bot === 'gween_turtle') return turtleHandler(req, res);
     if (bot === 'cooper' || bot === 'koopa') return cooperHandler(req, res);
     if (bot === 'timmy') return timmyHandler(req, res);
+    if (bot === 'antigravity') return antigravityHandler(req, res);
     return stockfishHandler(req, res);
 }
