@@ -36,6 +36,7 @@
     <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
     <script src="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>
+    <script src="openingBook.js"></script>
     <script>
         var board = null, game = new Chess(), engine = new Worker('./stockfish-18-lite-single.js'), sourceSquare = null, isThinking = false, chatHistory = [];
         engine.postMessage('uci'); engine.postMessage('setoption name UCI_LimitStrength value true'); engine.postMessage('setoption name UCI_Elo value 1200'); engine.postMessage('setoption name Skill Level value 5');
@@ -116,6 +117,20 @@
                     $('.square-55d63').removeClass('highlight-last');
                     $('.square-'+move.from+', .square-'+move.to).addClass('highlight-last');
                     await getAIResponse(move, true);
+
+                    const bookMove = window.getOpeningBookMove ? window.getOpeningBookMove(game) : null;
+                    if (bookMove) {
+                        const botMove = game.move(bookMove);
+                        if (botMove) {
+                            board.position(game.fen());
+                            $('.square-55d63').removeClass('highlight-last');
+                            $('.square-'+botMove.from+', .square-'+botMove.to).addClass('highlight-last');
+                            await getAIResponse(botMove, false);
+                            sourceSquare = null;
+                            return;
+                        }
+                    }
+
                     engine.postMessage('position fen ' + game.fen());
                     engine.postMessage('go movetime 800');
                 }

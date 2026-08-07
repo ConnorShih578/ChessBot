@@ -40,7 +40,7 @@
     <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
     <script src="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>
-
+    <script src="openingBook.js"></script>
     <script type="module">
         const game = new Chess();
         let board = null;
@@ -137,6 +137,20 @@
                     updateHighlight(move);
                     $('#status').text("SYSTEM: COMMENTATING...");
                     await getAIResponse(move, true);
+
+                    const bookMove = window.getOpeningBookMove ? window.getOpeningBookMove(game) : null;
+                    if (bookMove) {
+                        const botMove = game.move(bookMove);
+                        if (botMove) {
+                            board.position(game.fen());
+                            $('.square-55d63').removeClass('highlight-last');
+                            $(`.square-${botMove.from}, .square-${botMove.to}`).addClass('highlight-last');
+                            await getAIResponse(botMove, false);
+                            $('#status').text("SYSTEM: YOUR TURN");
+                            return;
+                        }
+                    }
+
                     $('#status').text("SYSTEM: STOCKFISH THINKING...");
                     sf.postMessage(`position fen ${game.fen()}`);
                     sf.postMessage('go movetime 700');
