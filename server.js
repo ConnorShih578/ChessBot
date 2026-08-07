@@ -13,7 +13,7 @@ app.use(express.json());
 app.use(express.static(__dirname));
 
 const GCP_PROJECT_ID = process.env.GCP_PROJECT_ID || 'gen-lang-client-0056706521';
-const GCP_LOCATION = process.env.GCP_LOCATION || 'us-central1';
+const GCP_LOCATION = process.env.GCP_LOCATION || 'global';
 
 const SYSTEM_INSTRUCTION = `You are the "voice" of a chess bot (Stockfish). When there are move inputs, react to them in character.
 
@@ -44,10 +44,9 @@ app.post('/api/commentary', async (req, res) => {
 
         const ai = new GoogleGenAI(aiOptions);
         const response = await ai.models.generateContentStream({
-            model: 'gemini-2.5-flash',
+            model: 'gemma-4-26b-a4b-it-maas',
             config: {
                 temperature: 0.7,
-                thinkingConfig: { thinkingBudget: 0 },
                 systemInstruction: [{ text: SYSTEM_INSTRUCTION }]
             },
             contents: history

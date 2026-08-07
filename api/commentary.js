@@ -38,7 +38,7 @@ export default async function handler(req, res) {
                 aiOptions.vertexai = true;
                 aiOptions.vertexAI = true;
                 aiOptions.project = serviceAccount.project_id || process.env.GCP_PROJECT_ID || 'gen-lang-client-0056706521';
-                aiOptions.location = process.env.GCP_LOCATION || 'us-central1';
+                aiOptions.location = process.env.GCP_LOCATION || 'global';
                 aiOptions.googleAuthOptions = { credentials: serviceAccount };
             }
         }
@@ -55,10 +55,9 @@ export default async function handler(req, res) {
 
         const ai = new GoogleGenAI(aiOptions);
         const response = await ai.models.generateContentStream({
-            model: 'gemini-2.5-flash',
+            model: 'gemma-4-26b-a4b-it-maas',
             config: {
                 temperature: 0.7,
-                thinkingConfig: { thinkingBudget: 0 },
                 systemInstruction: [
                     { text: SYSTEM_INSTRUCTION }
                 ]
