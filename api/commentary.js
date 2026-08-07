@@ -26,15 +26,16 @@ export default async function handler(req, res) {
             }
 
             if (serviceAccount) {
+                aiOptions.vertexai = true;
                 aiOptions.vertexAI = true;
-                aiOptions.project = serviceAccount.project_id || process.env.GCP_PROJECT_ID || '927480480621';
+                aiOptions.project = serviceAccount.project_id || process.env.GCP_PROJECT_ID || 'gen-lang-client-0056706521';
                 aiOptions.location = process.env.GCP_LOCATION || 'us-central1';
-                aiOptions.googleAuth = { credentials: serviceAccount };
+                aiOptions.googleAuthOptions = { credentials: serviceAccount };
             }
         }
 
         // Fallback to API Key if Service Account is not set
-        if (!aiOptions.vertexAI) {
+        if (!aiOptions.vertexai) {
             const keyToUse = apiKey || process.env.GCP_API_KEY;
             if (keyToUse) {
                 aiOptions.apiKey = keyToUse;
@@ -45,7 +46,7 @@ export default async function handler(req, res) {
 
         const ai = new GoogleGenAI(aiOptions);
         const response = await ai.models.generateContentStream({
-            model: 'gemma-4-31b-it',
+            model: 'gemini-2.5-flash',
             config: {
                 temperature: 0.7,
                 systemInstruction: [
