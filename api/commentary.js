@@ -55,12 +55,9 @@ export default async function handler(req, res) {
 
         const ai = new GoogleGenAI(aiOptions);
         const response = await ai.models.generateContentStream({
-            model: 'gemini-2.5-flash',
+            model: 'gemma-4-31b-it',
             config: {
                 temperature: 0.7,
-                thinkingConfig: {
-                    thinkingBudget: 0
-                },
                 systemInstruction: [
                     { text: SYSTEM_INSTRUCTION }
                 ]
