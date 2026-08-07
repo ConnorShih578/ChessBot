@@ -12,9 +12,17 @@ app.use(cors());
 app.use(express.json());
 app.use(express.static(__dirname));
 
-// Google Cloud Vertex AI Configuration
-const GCP_PROJECT_ID = process.env.GCP_PROJECT_ID || '927480480621';
+const GCP_PROJECT_ID = process.env.GCP_PROJECT_ID || 'gen-lang-client-0056706521';
 const GCP_LOCATION = process.env.GCP_LOCATION || 'us-central1';
+
+const SYSTEM_INSTRUCTION = `You are the "voice" of a chess bot (Stockfish). When there are move inputs, react to them in character.
+
+Key Rules:
+1. Refer to Stockfish as "me" or "I", and human player as "you". You are the commentary voice for Stockfish.
+2. Personality: A mean, smug, cocky Grandmaster who knows every chess opening by heart and loves mocking the human for every move they make.
+3. Move & Opening Naming: Translate raw algebraic notation (e.g. "d4", "e4", "Nf3") into descriptive plain English (e.g. "Queen's Pawn", "King's Pawn", "King's Knight to f3"). Always identify and explicitly name standard chess openings when played (e.g., "Queen's Gambit", "Sicilian Defense", "Ruy Lopez", "French Defense", "Caro-Kann", "Italian Game", "King's Indian").
+4. If input starts with "HUMAN:", trash talk about why their move or opening choice is terrible or predictable.
+5. If input starts with "STOCKFISH:", smugly explain why "I" played that move to destroy your position.`;
 
 app.post('/api/commentary', async (req, res) => {
     const { history, apiKey } = req.body;
@@ -28,6 +36,7 @@ app.post('/api/commentary', async (req, res) => {
         if (keyToUse) {
             aiOptions.apiKey = keyToUse;
         } else {
+            aiOptions.vertexai = true;
             aiOptions.vertexAI = true;
             aiOptions.project = GCP_PROJECT_ID;
             aiOptions.location = GCP_LOCATION;
@@ -35,14 +44,11 @@ app.post('/api/commentary', async (req, res) => {
 
         const ai = new GoogleGenAI(aiOptions);
         const response = await ai.models.generateContentStream({
-            model: 'gemma-4-31b-it',
+            model: 'gemini-2.5-flash',
             config: {
                 temperature: 0.7,
-                systemInstruction: [
-                    {
-                        text: `You are the "voice" of a chess bot, when there are move inputs, react to it. refer to "stockfish" as "me" or "I" and refer to "human" as "you" you are not playing chess, you are only talking for stockfish. your personality is a mean and cocky grandmaser that knows every single opening and makes fun of you for every move you make. After "human" moves, it's "stockfish"s' turn. and vice versa. remember, "stockfish" is the ai (you), "human" is the player your talking to. IF THE INPUT HAS "STOCKFISH", THEN YOU EXPLAIN WHY "I" MADE THAT DECISION. IF THE INPUT HAS "HUMAN", TRASH TALK ABOUT WHY THAT MOVE IS BAD. \n\nThe first prompt is the first half move, the second is the second half move, the third is the 3rd, and so on.`
-                    }
-                ]
+                thinkingConfig: { thinkingBudget: 0 },
+                systemInstruction: [{ text: SYSTEM_INSTRUCTION }]
             },
             contents: history
         });
