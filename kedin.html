@@ -118,10 +118,10 @@
             $('#chat-window').scrollTop($('#chat-window')[0].scrollHeight);
 
             try {
-                const response = await fetch('/api/commentary', {
+                const response = await fetch('/api/commentary-fwog', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ history: chatHistory, bot: 'gween_fwog' })
+                    body: JSON.stringify({ history: chatHistory })
                 });
 
                 const reader = response.body.getReader();

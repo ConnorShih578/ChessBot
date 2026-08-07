@@ -83,7 +83,7 @@
             $('#chat-window').append(`<div class="bubble" id="${bubbleId}">> <span style="color: var(--accent);">Thinking...</span></div>`).scrollTop(9999);
 
             try {
-                const response = await fetch('/api/commentary', {
+                const response = await fetch('/api/commentary-stockfish', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ history: chatHistory })

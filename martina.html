@@ -17,9 +17,10 @@
         .bubble { background: #2d0d2d; padding: 10px 14px; border-radius: 12px; border-left: 3px solid var(--accent); align-self: flex-start; max-width: 85%; font-size: 0.9em; font-family: 'Courier New', monospace; }
         .controls { display: flex; flex-direction: column; gap: 10px; }
         button { padding: 12px; cursor: pointer; background: var(--accent); color: white; border: none; border-radius: 4px; font-weight: bold; text-transform: uppercase; width: 100%; }
-        #eval-status { color: var(--accent); font-size: 0.75em; margin-top: 10px; letter-spacing: 1px; }
+        #eval-status { color: var(--terminal); font-size: 0.75em; margin-top: 10px; letter-spacing: 1px; }
         .nav-link { text-decoration: none; color: var(--terminal); font-weight: bold; margin-bottom: 10px; }
         .highlight-sq {inset: 2px; color: #8b008b;}
+        .highlight-last { background-color: rgba(173, 20, 87, 0.4) !important; }
     </style>
 </head>
 <body>
@@ -29,9 +30,11 @@
         <div id="sidebar">
             <div class="bot-profile">
                 <div class="avatar">👩‍🏫</div>
-                <div><h3 style="margin:0;">Martina</h3><small id="eval-status">STATUS: BUSY</small></div>
+                <div><h3 style="margin:0;">Martina</h3><small id="eval-status">STATUS: ONLINE</small></div>
             </div>
-            <div id="chat-window"></div>
+            <div id="chat-window">
+                <div class="bubble">Oh, hello. Don't mind the mess, Martin is... well, Martin. Ready to lose?</div>
+            </div>
             <div class="controls">
                 <button id="undoBtn">Undo Move</button>
                 <button onclick="location.reload()">Initialize New Session</button>
@@ -43,49 +46,8 @@
     <script src="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>
     <script>
-        var board = null, game = new Chess(), engine = new Worker('./stockfish-18-lite-single.js'), sourceSquare = null, currentEval = 0.0;
-        engine.postMessage('uci'); 
-
-        const martinaQuotes = {
-            winning: [
-                "Martin would have fallen for that trap. I didn't.",
-                "I've got three kids and a husband to look after; I don't have time to let you win.",
-                "That move was... brave. Wrong, but brave.",
-                "You're playing like Martin today. That's not a compliment.",
-                "Just like my kids, you need to learn to think before you act.",
-                "I'm winning AND making dinner. Multitasking is key.",
-                "Are you trying to lose? Because it's working."
-            ],
-            losing: [
-                "The baby must be crying, I'm getting distracted.",
-                "Martin! Stop playing with the dog and come help! No, actually, stay away.",
-                "I suppose even I make mistakes when the house is this loud.",
-                "A rare moment of peace for you. Enjoy it.",
-                "Is Martin helping you? No, you're actually playing well.",
-                "I should have spent more time on this move and less time on the laundry."
-            ],
-            neutral: [
-                "Did you see where Martin put my car keys?",
-                "I'm much better at this than my husband. Obviously.",
-                "Hurry up, I have a PTA meeting in twenty minutes.",
-                "Martin says he's a grandmaster. Martin is a liar.",
-                "Would you like some tea? I'm making some anyway.",
-                "Try to keep it interesting. I'm already bored."
-            ],
-            thinking: [
-                "Checking the oven... and your defense.",
-                "Hold on, the kids are fighting again.",
-                "Let me think... Martin, put that down!",
-                "Analyzing... hope this doesn't take as long as Martin's turns.",
-                "Just a second..."
-            ],
-            victory: [
-                "Game over. Go tell Martin I'm still the champion.",
-                "Now, back to the real work. Good game.",
-                "Maybe you should practice with Martin first. He's easier.",
-                "Checkmate. Don't worry, I won't tell anyone you lost to a tired mom."
-            ]
-        };
+        var board = null, game = new Chess(), engine = new Worker('./stockfish-18-lite-single.js'), sourceSquare = null, isThinking = false, chatHistory = [];
+        engine.postMessage('uci');
 
         function speak(text) {
             const chat = $('#chat-window');
@@ -93,15 +55,60 @@
             chat.scrollTop(chat[0].scrollHeight);
         }
 
-        function getMartinaTalk(eval) {
-            let cat = 'neutral';
-            if (eval > 1.5) cat = 'winning';
-            else if (eval < -1.5) cat = 'losing';
-            const list = martinaQuotes[cat];
-            return list[Math.floor(Math.random() * list.length)];
+        async function getAIResponse(move, isUser) {
+            if (isThinking) return;
+            isThinking = true;
+
+            const inputPrompt = isUser ? `HUMAN: ${move.san}` : `MARTINA: ${move.san}`;
+            chatHistory.push({
+                role: 'user',
+                parts: [{ text: inputPrompt }]
+            });
+
+            const bubbleId = `msg-${Date.now()}`;
+            $('#chat-window').append(`<div class="bubble" id="${bubbleId}">Checking the oven...</div>`);
+            $('#chat-window').scrollTop($('#chat-window')[0].scrollHeight);
+
+            try {
+                const response = await fetch('/api/commentary-martina', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ history: chatHistory })
+                });
+
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder();
+                let fullText = "";
+                $(`#${bubbleId}`).html("");
+
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+                    const chunk = decoder.decode(value, { stream: true });
+                    fullText += chunk;
+                    $(`#${bubbleId}`).text(fullText);
+                    $('#chat-window').scrollTop($('#chat-window')[0].scrollHeight);
+                }
+
+                if (!fullText) {
+                    $(`#${bubbleId}`).text("(No response received)");
+                } else {
+                    chatHistory.push({
+                        role: 'model',
+                        parts: [{ text: fullText }]
+                    });
+                }
+
+            } catch (e) {
+                console.error("AI Error:", e);
+                $(`#${bubbleId}`).text(`ERROR: ${e.message}`);
+                chatHistory.pop();
+            } finally {
+                isThinking = false;
+            }
         }
 
-        function onSquareClick() {
+        async function onSquareClick() {
             var square = $(this).attr('data-square');
             if (game.game_over()) return;
             if (sourceSquare === null) {
@@ -118,7 +125,7 @@
                     board.position(game.fen());
                     $('.square-55d63').removeClass('highlight-last');
                     $('.square-'+move.from+', .square-'+move.to).addClass('highlight-last');
-                    speak(martinaQuotes.thinking[Math.floor(Math.random() * martinaQuotes.thinking.length)]);
+                    await getAIResponse(move, true);
                     engine.postMessage('position fen ' + game.fen());
                     engine.postMessage('go depth 15');
                 }
@@ -126,12 +133,7 @@
             }
         }
 
-        engine.onmessage = function(e) {
-            if (e.data.includes('score cp')) {
-                let score = parseInt(e.data.split('cp ')[1].split(' ')[0]);
-                currentEval = (game.turn() === 'b' ? score : -score) / 100;
-                $('#eval-status').text('STRESS LEVEL: ' + Math.abs(currentEval).toFixed(1));
-            }
+        engine.onmessage = async function(e) {
             if (e.data.startsWith('bestmove')) {
                 var m = e.data.split(' ')[1];
                 var move = game.move({ from: m.substring(0, 2), to: m.substring(2, 4), promotion: 'q' });
@@ -139,9 +141,9 @@
                 $('.square-55d63').removeClass('highlight-last');
                 $('.square-'+move.from+', .square-'+move.to).addClass('highlight-last');
                 if (game.in_checkmate()) { 
-                    speak(martinaQuotes.victory[Math.floor(Math.random() * martinaQuotes.victory.length)]); 
+                    speak("Game over. Don't worry, I won't tell anyone you lost to a tired mom."); 
                 } else {
-                    speak(getMartinaTalk(currentEval));
+                    await getAIResponse(move, false);
                 }
             }
         };
@@ -153,13 +155,13 @@
             $('.square-55d63').removeClass('highlight-last');
             $('.square-55d63').removeClass('highlight-sq');
             sourceSquare = null;
+            chatHistory = chatHistory.slice(0, -4);
             speak("Fine, take it back. Martin does that all the time too.");
         });
 
         $(document).ready(function() {
             board = Chessboard('board', { position: 'start', draggable: false, pieceTheme: 'https://chessboardjs.com/img/chesspieces/wikipedia/{piece}.png' });
             $(document).on('click', '.square-55d63', onSquareClick);
-            speak("Oh, hello. Don't mind the mess, Martin is... well, Martin. Ready to lose?");
         });
     </script>
 </body>

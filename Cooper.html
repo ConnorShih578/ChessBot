@@ -13,6 +13,7 @@
         #chat-window { flex: 1; background: white; border-radius: 12px; padding: 15px; overflow-y: auto; margin-bottom: 15px; border: 2px solid var(--yellow); display: flex; flex-direction: column; gap: 8px; }
         .bubble { background: #fff9c4; padding: 10px; border-radius: 15px; align-self: flex-start; border: 1px solid var(--yellow); }
         .highlight-sq { box-shadow: inset 0 0 3px 3px yellow; }
+        .highlight-last { background-color: rgba(251, 192, 45, 0.4) !important; }
         button { padding: 12px; cursor: pointer; background: var(--yellow); border: none; border-radius: 10px; font-weight: bold; box-shadow: 0 3px 0 var(--orange); margin-bottom: 10px; }
         button:active { transform: translateY(2px); box-shadow: 0 1px 0 var(--orange); }
     </style>
@@ -25,7 +26,9 @@
                 <span style="font-size:2em;">🐢</span>
                 <h3>King Koopa</h3>
             </div>
-            <div id="chat-window"></div>
+            <div id="chat-window">
+                <div class="bubble">He he he! King Koopa Troopa is in the building!</div>
+            </div>
             <button id="undoBtn">Undo Move</button>
             <button onclick="location.reload()">Rematch!</button>
         </div>
@@ -34,37 +37,68 @@
     <script src="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>
     <script>
-        var board = null, game = new Chess(), engine = new Worker('./stockfish-18-lite-single.js'), sourceSquare = null, currentEval = 0.0;
+        var board = null, game = new Chess(), engine = new Worker('./stockfish-18-lite-single.js'), sourceSquare = null, isThinking = false, chatHistory = [];
         engine.postMessage('uci'); engine.postMessage('setoption name UCI_Elo value 1400');
-
-        const quotes = {
-            winning: ["He he he! My shell is too tough for you!", "All my Koopas are going to be so proud of me!", "Are you sure you know how the horsey moves?", "I'm the king of the board! He he he!"],
-            losing: ["我头痛！ This isn't fair!", "Stop that! You're making my shell rattle!", "I'm going to tell Bowser you're mean!", "Is that move even legal? He he he... no it's not!"],
-            neutral: [
-                "Did you know Napoleon was once attacked by rabbits? He he he!",
-                "I'm not just a shell, I'm a mastermind! He he he!",
-                "Napoleon actually loved chess, but he was kind of bad at it. Just like you!",
-                "All hail King Koopa Troopa!",
-                "I'm thinking... but it's mostly about lettuce. He he he!",
-                "Did you know that Napoleon wore a necklace with a vial of poison attached?"
-            ],
-            victory: ["I WON! I WON! He he he!", "Next stop: Timchess.netlify.app!", "You got Koopa'd!", "Gwahahaha! Fear the shell!"],
-            defeat: [
-                "NOOOOO! My beautiful shell! It's cracked!", 
-                "You cheated! I'm retreating into my shell and never coming out!", 
-                "This doesn't count! I was thinking about lettuce!", 
-                "I'm telling Bowser! You're going to be in so much trouble! He he... *sob*",
-                "Wait! Let's just talk about Napoleon instead! Don't checkmate me!"
-            ],
-            undo: ["He he he! Afraid of my genius? Fine, take it back!", "A do-over? Bowser wouldn't be this nice!"]
-        };
 
         function speak(text) {
             $('#chat-window').append(`<div class="bubble">${text}</div>`);
             $('#chat-window').scrollTop($('#chat-window')[0].scrollHeight);
         }
 
-        function onSquareClick() {
+        async function getAIResponse(move, isUser) {
+            if (isThinking) return;
+            isThinking = true;
+
+            const inputPrompt = isUser ? `HUMAN: ${move.san}` : `KOOPA: ${move.san}`;
+            chatHistory.push({
+                role: 'user',
+                parts: [{ text: inputPrompt }]
+            });
+
+            const bubbleId = `msg-${Date.now()}`;
+            $('#chat-window').append(`<div class="bubble" id="${bubbleId}">He he he... <span style="color: #aaa;">thinking...</span></div>`);
+            $('#chat-window').scrollTop($('#chat-window')[0].scrollHeight);
+
+            try {
+                const response = await fetch('/api/commentary-cooper', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ history: chatHistory })
+                });
+
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder();
+                let fullText = "";
+                $(`#${bubbleId}`).html("");
+
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+                    const chunk = decoder.decode(value, { stream: true });
+                    fullText += chunk;
+                    $(`#${bubbleId}`).text(fullText);
+                    $('#chat-window').scrollTop($('#chat-window')[0].scrollHeight);
+                }
+
+                if (!fullText) {
+                    $(`#${bubbleId}`).text("He he he! (No response)");
+                } else {
+                    chatHistory.push({
+                        role: 'model',
+                        parts: [{ text: fullText }]
+                    });
+                }
+
+            } catch (e) {
+                console.error("AI Error:", e);
+                $(`#${bubbleId}`).text(`ERROR: ${e.message}`);
+                chatHistory.pop();
+            } finally {
+                isThinking = false;
+            }
+        }
+
+        async function onSquareClick() {
             var square = $(this).attr('data-square');
             if (game.game_over()) return;
             if (sourceSquare === null) {
@@ -79,34 +113,27 @@
                 $('.square-55d63').removeClass('highlight-sq');
                 if (move) {
                     board.position(game.fen());
-                    
-                    // Check if PLAYER just checkmated Koopa
-                    if (game.in_checkmate()) {
-                        speak(quotes.defeat[Math.floor(Math.random() * quotes.defeat.length)]);
-                    } else {
-                        engine.postMessage('position fen ' + game.fen());
-                        engine.postMessage('go movetime 800');
-                    }
+                    $('.square-55d63').removeClass('highlight-last');
+                    $('.square-'+move.from+', .square-'+move.to).addClass('highlight-last');
+                    await getAIResponse(move, true);
+                    engine.postMessage('position fen ' + game.fen());
+                    engine.postMessage('go movetime 800');
                 }
                 sourceSquare = null;
             }
         }
 
-        engine.onmessage = function(e) {
-            if (e.data.includes('score cp')) currentEval = (game.turn() === 'b' ? parseInt(e.data.split('cp ')[1]) : -parseInt(e.data.split('cp ')[1])) / 100;
+        engine.onmessage = async function(e) {
             if (e.data.startsWith('bestmove')) {
                 var m = e.data.split(' ')[1];
-                game.move({ from: m.substring(0, 2), to: m.substring(2, 4), promotion: 'q' });
+                var move = game.move({ from: m.substring(0, 2), to: m.substring(2, 4), promotion: 'q' });
                 board.position(game.fen());
-                
-                // Check if KOOPA just checkmated Player
+                $('.square-55d63').removeClass('highlight-last');
+                $('.square-'+move.from+', .square-'+move.to).addClass('highlight-last');
                 if (game.in_checkmate()) {
-                    speak(quotes.victory[Math.floor(Math.random() * quotes.victory.length)]);
+                    speak("I WON! I WON! He he he! You got Koopa'd!");
                 } else {
-                    let cat = 'neutral';
-                    if (currentEval > 1.5) cat = 'winning';
-                    else if (currentEval < -1.5) cat = 'losing';
-                    speak(quotes[cat][Math.floor(Math.random() * quotes[cat].length)]);
+                    await getAIResponse(move, false);
                 }
             }
         };
@@ -116,13 +143,13 @@
             board.position(game.fen());
             sourceSquare = null;
             $('.square-55d63').removeClass('highlight-sq');
-            speak(quotes.undo[Math.floor(Math.random() * quotes.undo.length)]);
+            chatHistory = chatHistory.slice(0, -4);
+            speak("He he he! Afraid of my genius? Fine, take it back!");
         });
 
         $(document).ready(function() {
             board = Chessboard('board', { position: 'start', draggable: false, pieceTheme: 'https://chessboardjs.com/img/chesspieces/wikipedia/{piece}.png' });
             $(document).on('click', '.square-55d63', onSquareClick);
-            speak("He he he! King Koopa Troopa is in the building!");
         });
     </script>
 </body>

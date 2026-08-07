@@ -109,53 +109,72 @@
             game = new Chess(), 
             engine = new Worker('./stockfish-18-lite-single.js'), 
             sourceSquare = null,
-            currentEval = 0;
+            isThinking = false,
+            chatHistory = [];
 
         engine.postMessage('uci');
         engine.postMessage('setoption name UCI_LimitStrength value true');
         engine.postMessage('setoption name UCI_Elo value 1450');
-        engine.postMessage('setoption name Contempt value 30'); 
-        engine.postMessage('setoption name Threads value 1');
-
-        const pools = {
-            winning: ["You Will Suffer From Turtle", "我是更好", "eating nois", "Slow... but very steady. eating nois", "They say slow and steady wins the race, ask my friend Gween Fwog, he knows."],
-            losing: ["*turtle noises* (nervous)", "I have pwentty of time... I think.", "Do you like my gween shell?", "eating nois (slowly)", "I wonder why my shell looks different...", "Oh, no! My shell is cracking!"],
-            neutral: ["Hi, I’m Gween Turtle", "*turtle noises*", "eating nois", "Do you like my gween shell?", "I look better than King Koopa, right? My shell is more GWEEN."],
-            gameWin: ["You suffered from Turtle! eating nois (happy)", "My shell is too strong! 我是更好!", "Turtle wins the race! *happy turtle noises*"],
-            gameLoss: ["My shell... it's in pieces. *sad turtle noises*", "I ran out of time? But turtles live forever...", "I will go back in my shell now. eating nois (sad)"],
-            gameDraw: ["We are both turtles today. *turtle noises*", "A draw? eating nois (confused)", "My shell and your shell are the same."]
-        };
 
         function speak(text) {
-            const chat = document.getElementById('chat-window');
             $('#chat-window').append(`<div class="bubble">${text}</div>`);
-            chat.scrollTop = chat.scrollHeight;
+            $('#chat-window').scrollTop($('#chat-window')[0].scrollHeight);
         }
 
-        function getCommentary() {
-            let pool = pools.neutral;
-            if (currentEval > 0.7) pool = pools.winning;
-            else if (currentEval < -0.7) pool = pools.losing;
-            return pool[Math.floor(Math.random() * pool.length)];
-        }
+        async function getAIResponse(move, isUser) {
+            if (isThinking) return;
+            isThinking = true;
 
-        function checkGameOver() {
-            if (game.game_over()) {
-                if (game.in_checkmate()) {
-                    if (game.turn() === 'b') {
-                        speak(pools.gameLoss[Math.floor(Math.random() * pools.gameLoss.length)]);
-                    } else {
-                        speak(pools.gameWin[Math.floor(Math.random() * pools.gameWin.length)]);
-                    }
-                } else {
-                    speak(pools.gameDraw[Math.floor(Math.random() * pools.gameDraw.length)]);
+            const inputPrompt = isUser ? `HUMAN: ${move.san}` : `TURTLE: ${move.san}`;
+            chatHistory.push({
+                role: 'user',
+                parts: [{ text: inputPrompt }]
+            });
+
+            const bubbleId = `msg-${Date.now()}`;
+            $('#chat-window').append(`<div class="bubble" id="${bubbleId}">*turtle noises* <span style="color: #aaa;">(thinking...)</span></div>`);
+            $('#chat-window').scrollTop($('#chat-window')[0].scrollHeight);
+
+            try {
+                const response = await fetch('/api/commentary-turtle', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ history: chatHistory })
+                });
+
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder();
+                let fullText = "";
+                $(`#${bubbleId}`).html("");
+
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+                    const chunk = decoder.decode(value, { stream: true });
+                    fullText += chunk;
+                    $(`#${bubbleId}`).text(fullText);
+                    $('#chat-window').scrollTop($('#chat-window')[0].scrollHeight);
                 }
-                return true;
+
+                if (!fullText) {
+                    $(`#${bubbleId}`).text("*turtle noises* (No response)");
+                } else {
+                    chatHistory.push({
+                        role: 'model',
+                        parts: [{ text: fullText }]
+                    });
+                }
+
+            } catch (e) {
+                console.error("AI Error:", e);
+                $(`#${bubbleId}`).text(`ERROR: ${e.message}`);
+                chatHistory.pop();
+            } finally {
+                isThinking = false;
             }
-            return false;
         }
 
-        function onSquareClick() {
+        async function onSquareClick() {
             var square = $(this).attr('data-square');
             if (game.game_over()) return;
 
@@ -175,28 +194,15 @@
                     $('.square-55d63').removeClass('highlight-last');
                     $('.square-'+move.from+', .square-'+move.to).addClass('highlight-last');
                     
-                    if (!checkGameOver()) {
-                        engine.postMessage('position fen ' + game.fen());
-                        engine.postMessage('go movetime 1000'); 
-                    }
+                    await getAIResponse(move, true);
+                    engine.postMessage('position fen ' + game.fen());
+                    engine.postMessage('go movetime 800'); 
                 }
                 sourceSquare = null;
             }
         }
 
-        engine.onmessage = function(e) {
-            if (e.data.includes('score ')) {
-                const scoreParts = e.data.split('score ')[1].split(' ');
-                const scoreType = scoreParts[0]; 
-                const scoreValue = parseInt(scoreParts[1]);
-
-                if (scoreType === 'cp') {
-                    currentEval = scoreValue / 100;
-                } else if (scoreType === 'mate') {
-                    currentEval = scoreValue > 0 ? 99 : -99;
-                }
-            }
-
+        engine.onmessage = async function(e) {
             if (e.data.startsWith('bestmove')) {
                 var m = e.data.split(' ')[1];
                 var move = game.move({ from: m.substring(0, 2), to: m.substring(2, 4), promotion: 'q' });
@@ -204,8 +210,10 @@
                 $('.square-55d63').removeClass('highlight-last');
                 $('.square-'+move.from+', .square-'+move.to).addClass('highlight-last');
                 
-                if (!checkGameOver()) {
-                    speak(getCommentary());
+                if (game.in_checkmate()) {
+                    speak("Turtle wins the race! *happy turtle noises* eating nois (happy)");
+                } else {
+                    await getAIResponse(move, false);
                 }
             }
         };
@@ -216,7 +224,8 @@
             $('.square-55d63').removeClass('highlight-last');
             $('.square-55d63').removeClass('highlight-sq');
             sourceSquare = null;
-            speak("I have pwentty of time... take it back.");
+            chatHistory = chatHistory.slice(0, -4);
+            speak("I have pwentty of time... take it back. eating nois");
         });
 
         $(document).ready(function() {
