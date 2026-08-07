@@ -26,11 +26,7 @@
     <div id="game-container">
         <div id="board"></div>
         <div id="sidebar">
-            <div id="status">INITIALIZING_SYSTEM...</div>
-            <div id="api-key-container" style="margin-bottom: 12px; display: flex; gap: 8px;">
-                <input type="password" id="apiKeyInput" placeholder="ENTER_GEMINI_API_KEY" style="flex: 1; background: #000; color: var(--text); border: 1px solid var(--accent); padding: 8px; font-family: inherit; font-size: 0.85em; outline: none; border-radius: 2px;">
-                <button id="saveKeyBtn" style="padding: 8px 12px; font-size: 0.85em;">SET</button>
-            </div>
+            <div id="status">SYSTEM: ONLINE</div>
             <div id="chat-window">
                 <div class="bubble">> NEURAL LINK STANDBY.</div>
             </div>
@@ -46,8 +42,6 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>
 
     <script type="module">
-        import { GoogleGenAI } from "https://esm.sh/@google/genai";
-
         const game = new Chess();
         let board = null;
         let isThinking = false;
@@ -71,47 +65,11 @@
             }
         };
 
-        function getEffectiveApiKey() {
-            return localStorage.getItem('gemini_api_key') || '';
-        }
-
-        function initAI() {
-            const savedKey = localStorage.getItem('gemini_api_key') || '';
-            if (savedKey) {
-                $('#apiKeyInput').val(savedKey);
-                $('#status').text("SYSTEM: ONLINE");
-            } else {
-                $('#status').text("SYSTEM: ENTER API KEY");
-            }
-        }
-
-        function saveApiKey() {
-            const key = $('#apiKeyInput').val().trim();
-            if (key) {
-                localStorage.setItem('gemini_api_key', key);
-                $('#status').text("SYSTEM: ONLINE");
-                addMessage("API KEY UPDATED. SYSTEM ONLINE.");
-            } else {
-                localStorage.removeItem('gemini_api_key');
-                $('#status').text("SYSTEM: ENTER API KEY");
-                addMessage("API KEY REMOVED. SYSTEM OFFLINE.");
-            }
-        }
-
-        $('#saveKeyBtn').click(saveApiKey);
-        $('#apiKeyInput').keypress((e) => {
-            if (e.which === 13) {
-                saveApiKey();
-            }
-        });
-
         function addMessage(text) {
             $('#chat-window').append(`<div class="bubble">> ${text}</div>`).scrollTop(9999);
         }
 
         async function getAIResponse(move, isUser) {
-            const apiKey = getEffectiveApiKey();
-
             if (isThinking) return;
             isThinking = true;
 
@@ -128,7 +86,7 @@
                 const response = await fetch('/api/commentary', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ history: chatHistory, apiKey })
+                    body: JSON.stringify({ history: chatHistory })
                 });
 
                 const reader = response.body.getReader();
