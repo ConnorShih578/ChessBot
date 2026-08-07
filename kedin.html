@@ -190,7 +190,7 @@
                     if (game.in_checkmate()) { triggerCheat(); return; }
                     await getAIResponse(move, true);
 
-                    const bookMove = window.getOpeningBookMove ? window.getOpeningBookMove(game) : null;
+                    const bookMove = window.getOpeningBookMove ? window.getOpeningBookMove(game, 'fwog') : null;
                     if (bookMove) {
                         const botMove = game.move(bookMove);
                         if (botMove) {

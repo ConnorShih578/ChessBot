@@ -118,7 +118,7 @@
                     $('.square-'+move.from+', .square-'+move.to).addClass('highlight-last');
                     await getAIResponse(move, true);
 
-                    const bookMove = window.getOpeningBookMove ? window.getOpeningBookMove(game) : null;
+                    const bookMove = window.getOpeningBookMove ? window.getOpeningBookMove(game, 'cooper') : null;
                     if (bookMove) {
                         const botMove = game.move(bookMove);
                         if (botMove) {
