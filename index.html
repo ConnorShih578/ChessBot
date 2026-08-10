@@ -8,12 +8,8 @@
     <link rel="icon" type="image/png" href="Faviconchess.png">
     <style>
         :root {
-            --bg-color: #212121;
-            --card-bg: #2c2c2c;
+            --bg-color: #121212;
             --text-color: #ffffff;
-            --accent-blue: #2196F3;
-            --accent-yellow: #FFEB3B;
-            --accent-green: #4CAF50;
         }
 
         body {
@@ -26,55 +22,77 @@
             justify-content: center;
             min-height: 100vh;
             margin: 0;
+            padding: 30px 10px;
+        }
+
+        h1 {
+            font-size: 3rem;
+            margin-bottom: 5px;
+            background: linear-gradient(90deg, #2196F3, #bb86fc);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
         }
 
         .bot-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-            gap: 20px;
-            max-width: 1100px;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 22px;
+            max-width: 1200px;
             width: 95%;
             padding: 20px;
         }
 
         .bot-card {
-            background: var(--card-bg);
-            border-radius: 12px;
-            padding: 20px;
+            border-radius: 16px;
+            padding: 24px 20px;
             text-align: center;
-            transition: transform 0.2s;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             text-decoration: none;
             color: white;
-            border: 2px solid transparent;
+            border: 2px solid var(--theme-color, #444);
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: space-between;
         }
 
         .bot-card:hover {
-            transform: translateY(-5px);
-            border-color: var(--accent-blue);
+            transform: translateY(-8px) scale(1.02);
+            box-shadow: 0 12px 28px var(--glow-color, rgba(255,255,255,0.2));
+            border-color: var(--theme-color) !important;
         }
 
         .avatar {
-            font-size: 50px;
+            font-size: 55px;
             display: block;
-            margin-bottom: 10px;
+            margin-bottom: 12px;
+            filter: drop-shadow(0 4px 8px rgba(0,0,0,0.4));
+        }
+
+        .card-title {
+            font-weight: bold;
+            font-size: 1.4rem;
+            margin-bottom: 6px;
+            color: var(--theme-color, #fff);
+        }
+
+        .card-desc {
+            font-size: 0.85rem;
+            color: #d1d5db;
+            margin-bottom: 15px;
+            line-height: 1.4;
         }
 
         .tag {
             display: inline-block;
-            padding: 4px 10px;
-            border-radius: 15px;
+            padding: 6px 14px;
+            border-radius: 20px;
             font-size: 0.75rem;
             font-weight: bold;
-        }
-
-        .tag-yellow {
-            background: #fbc02d;
-            color: black;
-        }
-
-        .tag-green {
-            background: #4caf50;
-            color: white;
+            letter-spacing: 0.5px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
         }
     </style>
 </head>
@@ -82,63 +100,77 @@
 <body>
 
     <h1>Tim Chess</h1>
-    <p>Select your opponent to begin playing!</p>
+    <p style="color: #aaa; margin-bottom: 25px;">Select your opponent to begin playing!</p>
 
     <div class="bot-grid">
-        <!-- Timmy Card (Featured First) -->
-        <a href="timmy.html" class="bot-card" style="border-color: var(--accent-blue);">
-            <span class="avatar">👨‍💻</span>
-            <div style="font-weight:bold; font-size:1.4rem;">Timmy</div>
-            <p style="font-size:0.8rem; color:#aaa;">Mastermind behind TimChess. Pairs with Antigravity at 12:00 AM to build sites in minutes, walks around and eats by day.</p>
-            <span class="tag" style="background:#2196F3;">600 ELO (Human)</span>
+        <!-- Timmy Card -->
+        <a href="timmy.html" class="bot-card" style="--theme-color: #2196F3; --glow-color: rgba(33, 150, 243, 0.45); background: linear-gradient(145deg, #0f172a, #1e293b);">
+            <div>
+                <span class="avatar">👨‍💻</span>
+                <div class="card-title">Timmy</div>
+                <p class="card-desc">Mastermind behind TimChess. Pairs with Antigravity at 12:00 AM to build sites in minutes, walks around and eats by day.</p>
+            </div>
+            <span class="tag" style="background:#2196F3; color: white;">600 ELO (Human)</span>
         </a>
 
         <!-- Antigravity Card -->
-        <a href="antigravity.html" class="bot-card" style="border-color: #bb86fc; background: linear-gradient(145deg, #161b22, #1f1a3a);">
-            <span class="avatar">🚀</span>
-            <div style="font-weight:bold; font-size:1.4rem; color: #bb86fc;">Antigravity</div>
-            <p style="font-size:0.8rem; color:#aaa;">Google DeepMind pair programmer AI. Fast, precise, & hyper-analytical.</p>
+        <a href="antigravity.html" class="bot-card" style="--theme-color: #bb86fc; --glow-color: rgba(187, 134, 252, 0.45); background: linear-gradient(145deg, #161b22, #251b42);">
+            <div>
+                <span class="avatar">🚀</span>
+                <div class="card-title">Antigravity</div>
+                <p class="card-desc">Google DeepMind pair programmer AI. Fast, precise, & hyper-analytical.</p>
+            </div>
             <span class="tag" style="background: linear-gradient(90deg, #bb86fc, #03dac6); color: #000;">1400 ELO (AI)</span>
         </a>
 
-        <!-- Chicken Card (Max ELO) -->
-        <a href="chicken.html" class="bot-card" style="border-color: #f59e0b; background: linear-gradient(145deg, #1c1917, #292524);">
-            <span class="avatar">🐔</span>
-            <div style="font-weight:bold; font-size:1.4rem; color: #f59e0b;">Chicken</div>
-            <p style="font-size:0.8rem; color:#aaa;">Unstoppable Grandmaster beast. *cluck cluck* *bawk bawk noises...*</p>
+        <!-- Chicken Card -->
+        <a href="chicken.html" class="bot-card" style="--theme-color: #f59e0b; --glow-color: rgba(245, 158, 11, 0.45); background: linear-gradient(145deg, #1c1917, #332104);">
+            <div>
+                <span class="avatar">🐔</span>
+                <div class="card-title">Chicken</div>
+                <p class="card-desc">Unstoppable Grandmaster beast. *cluck cluck* *bawk bawk noises...*</p>
+            </div>
             <span class="tag" style="background: linear-gradient(90deg, #f59e0b, #ef4444); color: #fff;">Max ELO (3500+)</span>
         </a>
 
         <!-- King Koopa Troopa Card -->
-        <a href="cooper.html" class="bot-card" style="border-color: var(--accent-yellow);">
-            <span class="avatar">🐢👑</span>
-            <div style="font-weight:bold; font-size:1.4rem;">King Koopa Troopa</div>
-            <p style="font-size:0.8rem; color:#aaa;">Aggressive gambits and big headaches. 我头痛!</p>
-            <span class="tag tag-yellow">1200 ELO (Human)</span>
+        <a href="cooper.html" class="bot-card" style="--theme-color: #fbc02d; --glow-color: rgba(251, 192, 45, 0.45); background: linear-gradient(145deg, #261c02, #3b2b03);">
+            <div>
+                <span class="avatar">🐢👑</span>
+                <div class="card-title">King Koopa Troopa</div>
+                <p class="card-desc">Aggressive gambits and big headaches. 我头痛!</p>
+            </div>
+            <span class="tag" style="background: #fbc02d; color: black;">1200 ELO (Human)</span>
         </a>
 
         <!-- Turtle Card -->
-        <a href="turtle.html" class="bot-card">
-            <span class="avatar">🐢</span>
-            <div style="font-weight:bold; font-size:1.4rem;">Turtle</div>
-            <p style="font-size:0.8rem; color:#aaa;">Just a normal guy playing fair and square.</p>
-            <span class="tag tag-green">1200 ELO (Human)</span>
+        <a href="turtle.html" class="bot-card" style="--theme-color: #4caf50; --glow-color: rgba(76, 175, 80, 0.45); background: linear-gradient(145deg, #0c2415, #153820);">
+            <div>
+                <span class="avatar">🐢</span>
+                <div class="card-title">Turtle</div>
+                <p class="card-desc">Just a normal guy playing fair and square.</p>
+            </div>
+            <span class="tag" style="background: #4caf50; color: white;">1200 ELO (Human)</span>
         </a>
 
         <!-- Martina Card -->
-        <a href="martina.html" class="bot-card">
-            <span class="avatar">👧</span>
-            <div style="font-weight:bold; font-size:1.4rem;">Martina</div>
-            <p style="font-size:0.8rem; color:#aaa;">Sophisticated and high-level positional play.</p>
-            <span class="tag" style="background:#9c27b0;">Expert</span>
+        <a href="martina.html" class="bot-card" style="--theme-color: #ab47bc; --glow-color: rgba(171, 71, 188, 0.45); background: linear-gradient(145deg, #260a2c, #3d1047);">
+            <div>
+                <span class="avatar">👧</span>
+                <div class="card-title">Martina</div>
+                <p class="card-desc">Sophisticated and high-level positional play.</p>
+            </div>
+            <span class="tag" style="background: #ab47bc; color: white;">Expert</span>
         </a>
 
         <!-- Gween Fwog Card -->
-        <a href="kedin.html" class="bot-card">
-            <span class="avatar">🐸</span>
-            <div style="font-weight:bold; font-size:1.4rem;">Gween Fwog</div>
-            <p style="font-size:0.8rem; color:#aaa;">He might cheat, he might scwipt. Watch out!</p>
-            <span class="tag" style="background:#f44336;">600 ELO (Human)</span>
+        <a href="kedin.html" class="bot-card" style="--theme-color: #8bc34a; --glow-color: rgba(139, 195, 74, 0.45); background: linear-gradient(145deg, #162908, #25420d);">
+            <div>
+                <span class="avatar">🐸</span>
+                <div class="card-title">Gween Fwog</div>
+                <p class="card-desc">He might cheat, he might scwipt. Watch out!</p>
+            </div>
+            <span class="tag" style="background: #8bc34a; color: black;">600 ELO (Human)</span>
         </a>
     </div>
 

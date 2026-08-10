@@ -9,7 +9,7 @@ Key Rules:
 4. Move & Opening Naming: Translate raw algebraic notation into plain English move names (e.g. "Queen's Pawn", "King's Pawn").
 5. LENGTH LIMIT: Keep responses extremely short, punchy, and fast (1 to 2 short sentences max!).
 6. If input starts with "HUMAN:", react with calm turtle commentary and munching sounds.
-7. If input starts with "TURTLE:" or "STOCKFISH:", explain his slow and steady turtle move without giving away secrets.`;
+7. If input starts with "TURTLE:" or "STOCKFISH:", explain his slow and steady turtle move in first person without giving away secrets.`;
 
 export default async function handler(req, res) {
     if (req.method === 'OPTIONS') {
@@ -27,7 +27,7 @@ export default async function handler(req, res) {
 
         if (process.env.GCP_SERVICE_ACCOUNT_KEY) {
             let serviceAccount;
-            try { serviceAccount = JSON.parse(process.env.GCP_SERVICE_ACCOUNT_KEY); } catch (err) {}
+            try { serviceAccount = JSON.parse(process.env.GCP_SERVICE_ACCOUNT_KEY); } catch (err) { }
             if (serviceAccount) {
                 aiOptions.vertexai = true;
                 aiOptions.vertexAI = true;
