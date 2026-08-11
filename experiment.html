@@ -29,8 +29,8 @@
         .color-selector { display: flex; gap: 8px; margin-bottom: 10px; }
         .side-btn { flex: 1; padding: 10px; cursor: pointer; background: #111; color: #aaa; border: 1px solid #333; border-radius: 4px; font-weight: bold; font-family: inherit; }
         .side-btn.active { background: var(--accent-blue); border-color: var(--accent-blue); color: black; }
-        .controls { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-        .action-btn { padding: 10px; cursor: pointer; background: #222; color: #fff; border: 1px solid #444; border-radius: 4px; font-family: inherit; }
+        .controls { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+        .action-btn { padding: 10px; cursor: pointer; background: #222; color: #fff; border: 1px solid #444; border-radius: 4px; font-family: inherit; font-size: 0.85em; }
         .action-btn:hover { background: #333; }
         .highlight-last { background-color: rgba(41, 182, 246, 0.3) !important; }
         .highlight-sq { box-shadow: inset 0 0 3px 3px var(--accent-blue); }
@@ -54,6 +54,7 @@
                 <div class="bubble">> Hello! Ready for a friendly game of chess?</div>
             </div>
             <div class="controls">
+                <button id="voiceToggleBtn" class="action-btn">🔊 VOICE</button>
                 <button id="undoBtn" class="action-btn">UNDO_MOVE</button>
                 <button id="rebootBtn" class="action-btn">REBOOT_SYS</button>
             </div>
@@ -64,6 +65,7 @@
     <script src="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>
     <script src="openingBook.js"></script>
+    <script src="voice.js"></script>
 
     <script type="module">
         const game = new Chess();
@@ -76,6 +78,15 @@
         const sf = new Worker('./stockfish-18-lite-single.js');
         sf.postMessage('uci');
         sf.postMessage('setoption name UCI_Elo value 1400');
+
+        function updateVoiceBtnUI() {
+            $('#voiceToggleBtn').text(isVoiceMuted() ? '🔇 MUTED' : '🔊 VOICE');
+        }
+
+        $('#voiceToggleBtn').click(() => {
+            toggleVoiceMute();
+            updateVoiceBtnUI();
+        });
 
         sf.onmessage = async (e) => {
             if (e.data.startsWith('bestmove')) {
@@ -97,6 +108,7 @@
             const idAttr = id ? `id="${id}"` : '';
             $('#chat-window').append(`<div class="bubble" ${idAttr}>${text}</div>`);
             $('#chat-window').scrollTop($('#chat-window')[0].scrollHeight);
+            speakVoice(text, 'default');
         }
 
         async function getAIResponse(move, isUser) {
@@ -131,6 +143,7 @@
 
                 if (fullText) {
                     chatHistory.push({ role: 'model', parts: [{ text: fullText }] });
+                    speakVoice(fullText, 'default');
                 }
             } catch (err) {
                 console.error(err);
@@ -172,7 +185,9 @@
             $('#playWhiteBtn').toggleClass('active', playerColor === 'w');
             $('#playBlackBtn').toggleClass('active', playerColor === 'b');
             
-            $('#chat-window').html('<div class="bubble">> SYSTEM ONLINE. PLAYING AS ' + (playerColor === 'w' ? 'WHITE' : 'BLACK') + '.</div>');
+            const intro = '> SYSTEM ONLINE. PLAYING AS ' + (playerColor === 'w' ? 'WHITE' : 'BLACK') + '.';
+            $('#chat-window').html('<div class="bubble">' + intro + '</div>');
+            speakVoice(intro, 'default');
 
             if (playerColor === 'b') {
                 await makeBotMove();
@@ -212,6 +227,7 @@
         }
 
         $(document).ready(() => {
+            updateVoiceBtnUI();
             board = Chessboard('board', {
                 position: 'start',
                 draggable: false,

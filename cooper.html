@@ -61,10 +61,10 @@
             background: var(--accent-yellow); border-color: var(--accent-yellow); color: black;
         }
 
-        .controls { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .controls { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
         .action-btn {
-            padding: 12px; cursor: pointer; background: var(--accent-yellow); color: black;
-            border: none; border-radius: 6px; font-weight: bold;
+            padding: 10px; cursor: pointer; background: var(--accent-yellow); color: black;
+            border: none; border-radius: 6px; font-weight: bold; font-size: 0.9em;
         }
         .action-btn:hover { background: var(--accent-dark-yellow); }
 
@@ -97,7 +97,8 @@
             </div>
 
             <div class="controls">
-                <button id="undoBtn" class="action-btn">Undo Move</button>
+                <button id="voiceToggleBtn" class="action-btn" onclick="handleVoiceToggle()">🔊 Voice</button>
+                <button id="undoBtn" class="action-btn">Undo</button>
                 <button onclick="resetGame()" class="action-btn">New Game</button>
             </div>
         </div>
@@ -107,14 +108,25 @@
     <script src="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>
     <script src="openingBook.js"></script>
+    <script src="voice.js"></script>
     <script>
         var board = null, game = new Chess(), engine = new Worker('./stockfish-18-lite-single.js'), sourceSquare = null, isThinking = false, chatHistory = [], playerColor = 'w';
 
         engine.postMessage('uci'); engine.postMessage('setoption name UCI_LimitStrength value true'); engine.postMessage('setoption name UCI_Elo value 1200'); engine.postMessage('setoption name Skill Level value 5');
 
+        function updateVoiceBtnUI() {
+            $('#voiceToggleBtn').text(isVoiceMuted() ? '🔇 Muted' : '🔊 Voice');
+        }
+
+        function handleVoiceToggle() {
+            toggleVoiceMute();
+            updateVoiceBtnUI();
+        }
+
         function speak(text) {
             $('#chat-window').append(`<div class="bubble">${text}</div>`);
             $('#chat-window').scrollTop($('#chat-window')[0].scrollHeight);
+            speakVoice(text, 'cooper');
         }
 
         async function getAIResponse(move, isUser) {
@@ -153,6 +165,7 @@
                     $(`#${bubbleId}`).text("He he he! (No response)");
                 } else {
                     chatHistory.push({ role: 'model', parts: [{ text: fullText }] });
+                    speakVoice(fullText, 'cooper');
                 }
 
             } catch (e) {
@@ -200,7 +213,9 @@
             $('#playWhiteBtn').toggleClass('active', playerColor === 'w');
             $('#playBlackBtn').toggleClass('active', playerColor === 'b');
             
-            $('#chat-window').html('<div class="bubble">Gwahahaha! Playing as ' + (playerColor === 'w' ? 'White' : 'Black') + '!</div>');
+            const intro = 'Gwahahaha! Playing as ' + (playerColor === 'w' ? 'White' : 'Black') + '!';
+            $('#chat-window').html('<div class="bubble">' + intro + '</div>');
+            speakVoice(intro, 'cooper');
 
             if (playerColor === 'b') {
                 await makeBotMove();
@@ -256,6 +271,7 @@
         });
 
         $(document).ready(function() {
+            updateVoiceBtnUI();
             board = Chessboard('board', { position: 'start', draggable: false, pieceTheme: 'https://chessboardjs.com/img/chesspieces/wikipedia/{piece}.png' });
             $(document).on('click', '.square-55d63', onSquareClick);
         });

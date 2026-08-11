@@ -86,12 +86,12 @@
             background: var(--accent-purple); border-color: var(--accent-purple); color: black;
         }
 
-        .controls { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .controls { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
 
         .action-btn {
-            padding: 12px; cursor: pointer;
+            padding: 10px; cursor: pointer;
             background: linear-gradient(135deg, var(--accent-purple), #9965f4);
-            color: white; border: none; border-radius: 8px; font-weight: bold;
+            color: white; border: none; border-radius: 8px; font-weight: bold; font-size: 0.9em;
             box-shadow: 0 4px 10px var(--accent-glow); transition: filter 0.2s;
         }
 
@@ -127,7 +127,8 @@
             </div>
 
             <div class="controls">
-                <button id="undoBtn" class="action-btn">Undo Move</button>
+                <button id="voiceToggleBtn" class="action-btn" onclick="handleVoiceToggle()">🔊 Voice</button>
+                <button id="undoBtn" class="action-btn">Undo</button>
                 <button onclick="resetGame()" class="action-btn">New Session</button>
             </div>
         </div>
@@ -137,6 +138,7 @@
     <script src="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>
     <script src="openingBook.js"></script>
+    <script src="voice.js"></script>
     <script>
         var board = null, 
             game = new Chess(), 
@@ -148,9 +150,19 @@
 
         engine.postMessage('uci');
 
+        function updateVoiceBtnUI() {
+            $('#voiceToggleBtn').text(isVoiceMuted() ? '🔇 Muted' : '🔊 Voice');
+        }
+
+        function handleVoiceToggle() {
+            toggleVoiceMute();
+            updateVoiceBtnUI();
+        }
+
         function speak(text) {
             $('#chat-window').append(`<div class="bubble">${text}</div>`);
             $('#chat-window').scrollTop($('#chat-window')[0].scrollHeight);
+            speakVoice(text, 'antigravity');
         }
 
         async function getAIResponse(move, isUser) {
@@ -195,6 +207,7 @@
                         role: 'model',
                         parts: [{ text: fullText }]
                     });
+                    speakVoice(fullText, 'antigravity');
                 }
 
             } catch (e) {
@@ -242,7 +255,9 @@
             $('#playWhiteBtn').toggleClass('active', playerColor === 'w');
             $('#playBlackBtn').toggleClass('active', playerColor === 'b');
             
-            $('#chat-window').html('<div class="bubble">Neural session initialized. Playing as ' + (playerColor === 'w' ? 'White' : 'Black') + '.</div>');
+            const intro = 'Neural session initialized. Playing as ' + (playerColor === 'w' ? 'White' : 'Black') + '.';
+            $('#chat-window').html('<div class="bubble">' + intro + '</div>');
+            speakVoice(intro, 'antigravity');
 
             if (playerColor === 'b') {
                 await makeBotMove();
@@ -306,6 +321,7 @@
         });
 
         $(document).ready(function() {
+            updateVoiceBtnUI();
             board = Chessboard('board', { 
                 position: 'start', draggable: false, 
                 pieceTheme: 'https://chessboardjs.com/img/chesspieces/wikipedia/{piece}.png' 
