@@ -2,37 +2,60 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Tim Chess Experimental Bot</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tim Chess - Polite Bot</title>
     <link rel="stylesheet" href="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.css">
+    <link rel="icon" type="image/png" href="Faviconchess.png">
     <style>
-        :root { --bg: #0a0a0a; --text: #00ff41; --accent: #008f11; --terminal: #002200; }
-        body { background: var(--bg); color: var(--text); font-family: 'Courier New', monospace; display: flex; flex-direction: column; align-items: center; padding: 20px; margin: 0; }
-        #game-container { display: flex; flex-wrap: wrap; justify-content: center; gap: 20px; width: 100%; max-width: 1000px; }
-        #board { width: 450px; border: 3px solid var(--accent); box-shadow: 0 0 20px var(--terminal); }
-        #sidebar { width: 380px; height: 450px; background: #111; padding: 20px; display: flex; flex-direction: column; border: 1px solid var(--accent); box-sizing: border-box; }
-        #chat-window { flex: 1; background: #000; padding: 12px; overflow-y: auto; border: 1px solid #222; font-size: 0.9em; margin-bottom: 15px; color: #00ff41; }
-        .bubble { margin-bottom: 10px; border-left: 2px solid var(--accent); padding-left: 10px; line-height: 1.4; }
-        #status { font-size: 0.75em; color: var(--accent); margin-bottom: 8px; text-transform: uppercase; letter-spacing: 1px; }
+        :root {
+            --bg-color: #121212;
+            --card-bg: #1e1e1e;
+            --accent-green: #00e676;
+            --accent-blue: #29b6f6;
+            --text-main: #e0e0e0;
+        }
+
+        body {
+            background-color: var(--bg-color); color: var(--text-main); font-family: 'Consolas', 'Courier New', monospace;
+            display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; margin: 0; padding: 20px;
+        }
+
+        #game-container { display: flex; gap: 20px; width: 100%; max-width: 1000px; height: 600px; margin-top: 10px; }
+        #board { width: 550px; flex-shrink: 0; border: 2px solid #333; border-radius: 4px; }
+        #sidebar { flex: 1; background-color: var(--card-bg); border-radius: 4px; padding: 20px; display: flex; flex-direction: column; border: 1px solid #333; }
+        #status { font-weight: bold; color: var(--accent-green); margin-bottom: 10px; font-size: 0.9rem; letter-spacing: 1px; }
+        #chat-window { flex: 1; background: #000; border-radius: 4px; padding: 15px; overflow-y: auto; margin-bottom: 15px; display: flex; flex-direction: column; gap: 10px; border: 1px solid #222; }
+        .bubble { background: #111; padding: 10px; border-radius: 4px; border-left: 3px solid var(--accent-green); align-self: flex-start; max-width: 90%; font-size: 0.85em; line-height: 1.4; color: #aaa; }
+        .color-selector { display: flex; gap: 8px; margin-bottom: 10px; }
+        .side-btn { flex: 1; padding: 10px; cursor: pointer; background: #111; color: #aaa; border: 1px solid #333; border-radius: 4px; font-weight: bold; font-family: inherit; }
+        .side-btn.active { background: var(--accent-blue); border-color: var(--accent-blue); color: black; }
         .controls { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-        button { padding: 10px; cursor: pointer; background: var(--terminal); color: var(--text); border: 1px solid var(--accent); font-family: inherit; }
-        button:hover { background: var(--accent); color: #000; }
-        .highlight-last { background-color: rgba(0, 143, 17, 0.4) !important; }
+        .action-btn { padding: 10px; cursor: pointer; background: #222; color: #fff; border: 1px solid #444; border-radius: 4px; font-family: inherit; }
+        .action-btn:hover { background: #333; }
+        .highlight-last { background-color: rgba(41, 182, 246, 0.3) !important; }
+        .highlight-sq { box-shadow: inset 0 0 3px 3px var(--accent-blue); }
     </style>
 </head>
 <body>
 
-    <h1 style="margin-bottom: 20px;">TIM_CHESS_v3.4_ANALYTICAL</h1>
+    <h1 style="margin-bottom: 20px; color: var(--accent-blue);">TIM_CHESS_v3.4_POLITE</h1>
 
     <div id="game-container">
         <div id="board"></div>
         <div id="sidebar">
             <div id="status">SYSTEM: ONLINE</div>
+            
+            <div class="color-selector">
+                <button id="playWhiteBtn" class="side-btn active">Play as White ♔</button>
+                <button id="playBlackBtn" class="side-btn">Play as Black ♚</button>
+            </div>
+
             <div id="chat-window">
                 <div class="bubble">> Hello! Ready for a friendly game of chess?</div>
             </div>
             <div class="controls">
-                <button id="undoBtn">UNDO_MOVE</button>
-                <button onclick="location.reload()">REBOOT_SYS</button>
+                <button id="undoBtn" class="action-btn">UNDO_MOVE</button>
+                <button id="rebootBtn" class="action-btn">REBOOT_SYS</button>
             </div>
         </div>
     </div>
@@ -41,11 +64,14 @@
     <script src="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>
     <script src="openingBook.js"></script>
+
     <script type="module">
         const game = new Chess();
         let board = null;
         let isThinking = false;
         let chatHistory = [];
+        let playerColor = 'w';
+        let sourceSquare = null;
 
         const sf = new Worker('./stockfish-18-lite-single.js');
         sf.postMessage('uci');
@@ -54,116 +80,151 @@
         sf.onmessage = async (e) => {
             if (e.data.startsWith('bestmove')) {
                 const moveStr = e.data.split(' ')[1];
-                if (moveStr && moveStr !== '(none)') {
-                    const move = game.move({ from: moveStr.slice(0, 2), to: moveStr.slice(2, 4), promotion: 'q' });
-                    board.position(game.fen());
-                    updateHighlight(move);
-                    $('#status').text("SYSTEM: COMMENTATING...");
-                    await getAIResponse(move, false);
-                    $('#status').text("SYSTEM: YOUR TURN");
-                }
+                const move = game.move({ from: moveStr.slice(0,2), to: moveStr.slice(2,4), promotion: 'q' });
+                board.position(game.fen());
+                updateHighlight(move);
+                $('#status').text("SYSTEM: YOUR TURN");
+                await getAIResponse(move, false);
             }
         };
-
-        function addMessage(text) {
-            $('#chat-window').append(`<div class="bubble">> ${text}</div>`).scrollTop(9999);
-        }
-
-        async function getAIResponse(move, isUser) {
-            if (isThinking) return;
-            isThinking = true;
-
-            const inputPrompt = isUser ? `HUMAN: ${move.san}` : `STOCKFISH: ${move.san}`;
-            chatHistory.push({
-                role: 'user',
-                parts: [{ text: inputPrompt }]
-            });
-
-            const bubbleId = `msg-${Date.now()}`;
-            $('#chat-window').append(`<div class="bubble" id="${bubbleId}">> <span style="color: var(--accent);">Thinking...</span></div>`).scrollTop(9999);
-
-            try {
-                const response = await fetch('/api/commentary-stockfish', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ history: chatHistory })
-                });
-
-                const reader = response.body.getReader();
-                const decoder = new TextDecoder();
-                let fullText = "";
-                $(`#${bubbleId}`).html("> ");
-
-                while (true) {
-                    const { done, value } = await reader.read();
-                    if (done) break;
-                    const chunk = decoder.decode(value, { stream: true });
-                    fullText += chunk;
-                    $(`#${bubbleId}`).text("> " + fullText);
-                    $('#chat-window').scrollTop(9999);
-                }
-
-                if (!fullText) {
-                    $(`#${bubbleId}`).text("> (No response received)");
-                } else {
-                    chatHistory.push({
-                        role: 'model',
-                        parts: [{ text: fullText }]
-                    });
-                }
-
-            } catch (e) {
-                console.error("AI Error:", e);
-                $(`#${bubbleId}`).text(`> ERROR: Failed to generate response. ${e.message}`);
-                chatHistory.pop();
-            } finally {
-                isThinking = false;
-            }
-        }
 
         function updateHighlight(move) {
             $('.square-55d63').removeClass('highlight-last');
             $(`.square-${move.from}, .square-${move.to}`).addClass('highlight-last');
         }
 
-        $(document).ready(() => {
-            board = Chessboard('board', {
-                position: 'start',
-                draggable: true,
-                pieceTheme: 'https://chessboardjs.com/img/chesspieces/wikipedia/{piece}.png',
-                onDrop: async (source, target) => {
-                    const move = game.move({ from: source, to: target, promotion: 'q' });
-                    if (!move) return 'snapback';
+        function addMessage(text, id = null) {
+            const idAttr = id ? `id="${id}"` : '';
+            $('#chat-window').append(`<div class="bubble" ${idAttr}>${text}</div>`);
+            $('#chat-window').scrollTop($('#chat-window')[0].scrollHeight);
+        }
+
+        async function getAIResponse(move, isUser) {
+            if (isThinking) return;
+            isThinking = true;
+            const promptRole = isUser ? `HUMAN: ${move.san}` : `BOT: ${move.san}`;
+            chatHistory.push({ role: 'user', parts: [{ text: promptRole }] });
+
+            const msgId = `msg-${Date.now()}`;
+            addMessage("> PROCESSING...", msgId);
+
+            try {
+                const res = await fetch('/api/commentary-stockfish', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ history: chatHistory })
+                });
+
+                const reader = res.body.getReader();
+                const decoder = new TextDecoder();
+                let fullText = "";
+                $(`#${msgId}`).html("> ");
+
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+                    const chunk = decoder.decode(value, { stream: true });
+                    fullText += chunk;
+                    $(`#${msgId}`).text("> " + fullText);
+                    $('#chat-window').scrollTop($('#chat-window')[0].scrollHeight);
+                }
+
+                if (fullText) {
+                    chatHistory.push({ role: 'model', parts: [{ text: fullText }] });
+                }
+            } catch (err) {
+                console.error(err);
+                $(`#${msgId}`).text("> ERROR: STREAM INTERRUPTED");
+                chatHistory.pop();
+            } finally {
+                isThinking = false;
+            }
+        }
+
+        async function makeBotMove() {
+            if (game.game_over()) return;
+
+            const bookMove = window.getOpeningBookMove ? window.getOpeningBookMove(game, 'default') : null;
+            if (bookMove) {
+                const botMove = game.move(bookMove);
+                if (botMove) {
+                    board.position(game.fen());
+                    updateHighlight(botMove);
+                    await getAIResponse(botMove, false);
+                    $('#status').text("SYSTEM: YOUR TURN");
+                    return;
+                }
+            }
+
+            $('#status').text("SYSTEM: STOCKFISH THINKING...");
+            sf.postMessage(`position fen ${game.fen()}`);
+            sf.postMessage('go movetime 700');
+        }
+
+        async function resetGame() {
+            game.reset();
+            chatHistory = [];
+            board.position('start');
+            board.orientation(playerColor === 'w' ? 'white' : 'black');
+            $('.square-55d63').removeClass('highlight-last highlight-sq');
+            sourceSquare = null;
+
+            $('#playWhiteBtn').toggleClass('active', playerColor === 'w');
+            $('#playBlackBtn').toggleClass('active', playerColor === 'b');
+            
+            $('#chat-window').html('<div class="bubble">> SYSTEM ONLINE. PLAYING AS ' + (playerColor === 'w' ? 'WHITE' : 'BLACK') + '.</div>');
+
+            if (playerColor === 'b') {
+                await makeBotMove();
+            }
+        }
+
+        $('#playWhiteBtn').click(() => { playerColor = 'w'; resetGame(); });
+        $('#playBlackBtn').click(() => { playerColor = 'b'; resetGame(); });
+        $('#rebootBtn').click(() => resetGame());
+
+        async function onSquareClick() {
+            var square = $(this).attr('data-square');
+            if (game.game_over() || isThinking) return;
+
+            if (sourceSquare === null) {
+                var piece = game.get(square);
+                if (piece && piece.color === playerColor && game.turn() === playerColor) {
+                    sourceSquare = square;
+                    $('.square-55d63').removeClass('highlight-sq');
+                    $('.square-' + square).addClass('highlight-sq');
+                }
+            } else {
+                var move = game.move({ from: sourceSquare, to: square, promotion: 'q' });
+                $('.square-55d63').removeClass('highlight-sq');
+                if (move) {
+                    board.position(game.fen());
                     updateHighlight(move);
                     $('#status').text("SYSTEM: COMMENTATING...");
                     await getAIResponse(move, true);
 
-                    const bookMove = window.getOpeningBookMove ? window.getOpeningBookMove(game) : null;
-                    if (bookMove) {
-                        const botMove = game.move(bookMove);
-                        if (botMove) {
-                            board.position(game.fen());
-                            $('.square-55d63').removeClass('highlight-last');
-                            $(`.square-${botMove.from}, .square-${botMove.to}`).addClass('highlight-last');
-                            await getAIResponse(botMove, false);
-                            $('#status').text("SYSTEM: YOUR TURN");
-                            return;
-                        }
+                    if (!game.game_over()) {
+                        await makeBotMove();
                     }
-
-                    $('#status').text("SYSTEM: STOCKFISH THINKING...");
-                    sf.postMessage(`position fen ${game.fen()}`);
-                    sf.postMessage('go movetime 700');
                 }
+                sourceSquare = null;
+            }
+        }
+
+        $(document).ready(() => {
+            board = Chessboard('board', {
+                position: 'start',
+                draggable: false,
+                pieceTheme: 'https://chessboardjs.com/img/chesspieces/wikipedia/{piece}.png'
             });
-            initAI();
+            $(document).on('click', '.square-55d63', onSquareClick);
         });
 
         $('#undoBtn').click(() => {
             game.undo(); game.undo();
             board.position(game.fen());
             chatHistory = chatHistory.slice(0, -4);
-            addMessage("MEMORY PARTIALLY PURGED. RETURNING TO PREVIOUS STATE.");
+            addMessage("> MEMORY PARTIALLY PURGED. RETURNING TO PREVIOUS STATE.");
         });
     </script>
 </body>

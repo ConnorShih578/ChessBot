@@ -2,101 +2,113 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Tim Chess - Gween Fwog</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gween Fwog Bot</title>
     <link rel="stylesheet" href="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.css">
+    <link rel="icon" type="image/png" href="Faviconchess.png">
     <style>
         :root {
-            --bg-color: #e8f5e9;
-            --sidebar-color: #c8e6c9;
-            --fwog-dark: #2e7d32;
-            --fwog-light: #4caf50;
-            --cheat-red: #d32f2f;
+            --fwog-green: #8bc34a;
+            --fwog-dark: #689f38;
+            --bg-dark: #121212;
+            --card-dark: #1e1e1e;
         }
 
         body {
-            background-color: var(--bg-color); color: var(--fwog-dark);
-            font-family: 'Comic Neue', 'Comic Sans MS', cursive;
-            display: flex; flex-direction: column; align-items: center; margin: 0; padding: 20px;
+            background-color: var(--bg-dark);
+            color: #ffffff;
+            font-family: 'Comic Sans MS', 'Chalkboard SE', 'Segoe UI', sans-serif;
+            display: flex; flex-direction: column; align-items: center; margin: 0; padding: 20px; min-height: 100vh;
         }
 
-        #game-container { display: flex; gap: 20px; width: 100%; max-width: 1000px; height: 600px; }
-        #board { width: 550px; flex-shrink: 0; border: 8px solid var(--fwog-light); border-radius: 20px; overflow: hidden; }
+        .nav-link { text-decoration: none; color: var(--fwog-green); font-weight: bold; margin-bottom: 10px; align-self: flex-start; }
+
+        #game-container { display: flex; gap: 20px; width: 100%; max-width: 1000px; height: 600px; margin-top: 10px; }
+        #board { width: 550px; flex-shrink: 0; border: 4px solid var(--fwog-green); border-radius: 12px; }
 
         #sidebar {
-            flex: 1; background-color: var(--sidebar-color); border-radius: 30px;
-            padding: 20px; display: flex; flex-direction: column;
-            border: 4px solid var(--fwog-dark);
+            flex: 1; background-color: var(--card-dark); border-radius: 12px;
+            padding: 20px; display: flex; flex-direction: column; border: 2px solid var(--fwog-dark);
         }
 
-        .bot-profile { display: flex; align-items: center; gap: 15px; margin-bottom: 15px; }
+        .bot-profile {
+            display: flex; align-items: center; gap: 15px; margin-bottom: 15px;
+            padding-bottom: 15px; border-bottom: 1px solid #333;
+        }
+
         .avatar {
-            width: 65px; height: 65px; background-color: var(--fwog-light);
-            border-radius: 50%; display: flex; align-items: center;
-            justify-content: center; font-size: 2.2em; border: 4px solid white;
+            width: 60px; height: 60px; background-color: var(--fwog-green);
+            border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 2.2em;
         }
 
         #chat-window {
-            flex: 1; background: white; border-radius: 20px; padding: 15px;
-            overflow-y: auto; margin-bottom: 15px; border: 2px dashed var(--fwog-dark);
+            flex: 1; background: #0a0a0a; border-radius: 8px; padding: 15px;
+            overflow-y: auto; margin-bottom: 15px; display: flex; flex-direction: column; gap: 10px; border: 1px solid #333;
         }
 
         .bubble {
-            background: #f1f8e9; padding: 12px; border-radius: 18px;
-            border-bottom-left-radius: 2px; align-self: flex-start;
-            margin-bottom: 10px; border: 1px solid var(--fwog-light); font-weight: bold;
+            background: #2a3a1e; border: 1px solid var(--fwog-dark); padding: 10px 14px;
+            border-radius: 15px; border-bottom-left-radius: 2px; align-self: flex-start; max-width: 85%; font-size: 0.95em;
+        }
+
+        .color-selector { display: flex; gap: 8px; margin-bottom: 10px; }
+        .side-btn {
+            flex: 1; padding: 10px; cursor: pointer; background: #0a0a0a; color: white;
+            border: 2px solid #333; border-radius: 6px; font-weight: bold; transition: all 0.2s;
+        }
+        .side-btn.active {
+            background: var(--fwog-green); border-color: var(--fwog-green); color: black;
         }
 
         .controls { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-        button {
-            padding: 12px; cursor: pointer; background: var(--fwog-light);
-            color: white; border: none; border-radius: 25px;
-            font-weight: bold; font-family: inherit; font-size: 1.1em;
+        .action-btn {
+            padding: 12px; cursor: pointer; background: var(--fwog-green); color: black;
+            border: none; border-radius: 6px; font-weight: bold; font-family: inherit;
         }
+        .action-btn:hover { background: var(--fwog-dark); color: white; }
 
-        #officialResult { color: var(--cheat-red); font-weight: bold; display: none; text-align: center; margin-top: 5px; }
-        .highlight-sq { box-shadow: inset 0 0 3px 3px #a5d6a7; }
-        .highlight-last { background-color: rgba(129, 199, 132, 0.6) !important; }
-        
-        @keyframes shake {
-            0%, 100% { transform: rotate(0deg); }
-            25% { transform: rotate(1deg); }
-            75% { transform: rotate(-1deg); }
-        }
-        .victory-shake { animation: shake 0.2s infinite; }
+        .highlight-sq { box-shadow: inset 0 0 4px 4px #ffeb3b; }
+        .highlight-last { background-color: rgba(139, 195, 74, 0.4) !important; }
     </style>
 </head>
 <body>
-
-    <h1 style="font-size: 2.5em; margin-bottom: 10px;">🐸 Gween Fwog Chess 🐸</h1>
+    <a href="index.html" class="nav-link">← BACK TO HOME</a>
 
     <div id="game-container">
         <div id="board"></div>
+
         <div id="sidebar">
             <div class="bot-profile">
                 <div class="avatar">🐸</div>
                 <div>
-                    <h3 style="margin:0;">Gween Fwog</h3>
-                    <div id="officialResult">YOU WON! (Fwog Cheated)</div>
+                    <h3 style="margin:0; color: var(--fwog-green);">Gween Fwog</h3>
+                    <small style="color: #aaa;">600 ELO (Human)</small>
                 </div>
             </div>
-            <div id="chat-window">
-                <div class="bubble">Wibbit! Let's have a sensible game.</div>
+
+            <div class="color-selector">
+                <button id="playWhiteBtn" class="side-btn active" onclick="setPlayerColor('w')">Play as White ♔</button>
+                <button id="playBlackBtn" class="side-btn" onclick="setPlayerColor('b')">Play as Black ♚</button>
             </div>
+
+            <div id="chat-window">
+                <div class="bubble">Wibbit! I am Gween Fwog! Pick your color, stinky toad! 🐸</div>
+            </div>
+
             <div class="controls">
-                <button id="undoBtn">Undo?</button>
-                <button onclick="location.reload()">New Game</button>
+                <button id="undoBtn" class="action-btn">Undo Move</button>
+                <button onclick="resetGame()" class="action-btn">New Game</button>
             </div>
         </div>
     </div>
-
-    <footer><p>This bot and page was made with AI</p></footer>
 
     <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
     <script src="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>
     <script src="openingBook.js"></script>
     <script>
-        var board = null, game = new Chess(), engine = new Worker('./stockfish-18-lite-single.js'), sourceSquare = null, isThinking = false, chatHistory = [];
+        var board = null, game = new Chess(), engine = new Worker('./stockfish-18-lite-single.js'), sourceSquare = null, isThinking = false, chatHistory = [], playerColor = 'w';
+
         engine.postMessage('uci'); engine.postMessage('setoption name UCI_LimitStrength value true'); engine.postMessage('setoption name UCI_Elo value 600'); engine.postMessage('setoption name Skill Level value 0');
 
         function speak(text) {
@@ -109,10 +121,7 @@
             isThinking = true;
 
             const inputPrompt = isUser ? `HUMAN: ${move.san}` : `FWOG: ${move.san}`;
-            chatHistory.push({
-                role: 'user',
-                parts: [{ text: inputPrompt }]
-            });
+            chatHistory.push({ role: 'user', parts: [{ text: inputPrompt }] });
 
             const bubbleId = `msg-${Date.now()}`;
             $('#chat-window').append(`<div class="bubble" id="${bubbleId}">Wibbit... <span style="color: var(--fwog-dark);">thinking...</span></div>`);
@@ -142,10 +151,7 @@
                 if (!fullText) {
                     $(`#${bubbleId}`).text("Wibbit! (No response received)");
                 } else {
-                    chatHistory.push({
-                        role: 'model',
-                        parts: [{ text: fullText }]
-                    });
+                    chatHistory.push({ role: 'model', parts: [{ text: fullText }] });
                 }
 
             } catch (e) {
@@ -164,18 +170,60 @@
             setTimeout(() => {
                 game.remove(lastMove.to); game.load(game.fen()); board.position(game.fen());
                 speak("There. Much better. My turn! Wibbit!");
-                $('#officialResult').show();
-                engine.postMessage('position fen ' + game.fen());
-                engine.postMessage('go movetime 100');
+                makeBotMove();
             }, 600);
+        }
+
+        async function makeBotMove() {
+            if (game.game_over()) return;
+
+            const bookMove = window.getOpeningBookMove ? window.getOpeningBookMove(game, 'fwog') : null;
+            if (bookMove) {
+                const botMove = game.move(bookMove);
+                if (botMove) {
+                    board.position(game.fen());
+                    $('.square-55d63').removeClass('highlight-last');
+                    $('.square-'+botMove.from+', .square-'+botMove.to).addClass('highlight-last');
+                    await getAIResponse(botMove, false);
+                    sourceSquare = null;
+                    return;
+                }
+            }
+
+            engine.postMessage('position fen ' + game.fen());
+            engine.postMessage('go movetime 100');
+        }
+
+        async function setPlayerColor(color) {
+            playerColor = color;
+            resetGame();
+        }
+
+        async function resetGame() {
+            game.reset();
+            chatHistory = [];
+            board.position('start');
+            board.orientation(playerColor === 'w' ? 'white' : 'black');
+            $('.square-55d63').removeClass('highlight-last highlight-sq');
+            sourceSquare = null;
+
+            $('#playWhiteBtn').toggleClass('active', playerColor === 'w');
+            $('#playBlackBtn').toggleClass('active', playerColor === 'b');
+            
+            $('#chat-window').html('<div class="bubble">Wibbit! Playing as ' + (playerColor === 'w' ? 'White' : 'Black') + '! 🐸</div>');
+
+            if (playerColor === 'b') {
+                await makeBotMove();
+            }
         }
 
         async function onSquareClick() {
             var square = $(this).attr('data-square');
-            if (game.game_over()) return;
+            if (game.game_over() || isThinking) return;
+
             if (sourceSquare === null) {
                 var piece = game.get(square);
-                if (piece && piece.color === 'w') {
+                if (piece && piece.color === playerColor && game.turn() === playerColor) {
                     sourceSquare = square;
                     $('.square-55d63').removeClass('highlight-sq');
                     $('.square-' + square).addClass('highlight-sq');
@@ -189,22 +237,9 @@
                     $('.square-'+move.from+', .square-'+move.to).addClass('highlight-last');
                     if (game.in_checkmate()) { triggerCheat(); return; }
                     await getAIResponse(move, true);
-
-                    const bookMove = window.getOpeningBookMove ? window.getOpeningBookMove(game, 'fwog') : null;
-                    if (bookMove) {
-                        const botMove = game.move(bookMove);
-                        if (botMove) {
-                            board.position(game.fen());
-                            $('.square-55d63').removeClass('highlight-last');
-                            $('.square-'+botMove.from+', .square-'+botMove.to).addClass('highlight-last');
-                            await getAIResponse(botMove, false);
-                            sourceSquare = null;
-                            return;
-                        }
+                    if (!game.game_over()) {
+                        await makeBotMove();
                     }
-
-                    engine.postMessage('position fen ' + game.fen());
-                    engine.postMessage('go movetime 100');
                 }
                 sourceSquare = null;
             }
@@ -217,20 +252,18 @@
                 board.position(game.fen());
                 $('.square-55d63').removeClass('highlight-last');
                 $('.square-'+move.from+', .square-'+move.to).addClass('highlight-last');
-                if (game.in_checkmate()) { 
-                    speak("WIBBIT! THE POND IS MINE! CHECKMATE!"); 
-                    $('#board').addClass('victory-shake'); 
-                }
-                else {
-                    await getAIResponse(move, false);
-                }
+                await getAIResponse(move, false);
             }
         };
 
         $('#undoBtn').on('click', function() {
-            game.undo(); game.undo(); board.position(game.fen());
+            game.undo(); game.undo(); 
+            board.position(game.fen());
+            $('.square-55d63').removeClass('highlight-last');
+            $('.square-55d63').removeClass('highlight-sq');
+            sourceSquare = null;
             chatHistory = chatHistory.slice(0, -4);
-            speak("Wibbit! A do-over? I saw that!");
+            speak("Wibbit! Undo move!");
         });
 
         $(document).ready(function() {

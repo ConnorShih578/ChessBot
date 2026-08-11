@@ -77,16 +77,25 @@
             max-width: 85%; font-size: 0.95em; line-height: 1.4;
         }
 
+        .color-selector { display: flex; gap: 8px; margin-bottom: 10px; }
+        .side-btn {
+            flex: 1; padding: 10px; cursor: pointer; background: #21262d; color: white;
+            border: 2px solid #30363d; border-radius: 6px; font-weight: bold; transition: all 0.2s;
+        }
+        .side-btn.active {
+            background: var(--accent-purple); border-color: var(--accent-purple); color: black;
+        }
+
         .controls { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 
-        button {
+        .action-btn {
             padding: 12px; cursor: pointer;
             background: linear-gradient(135deg, var(--accent-purple), #9965f4);
             color: white; border: none; border-radius: 8px; font-weight: bold;
             box-shadow: 0 4px 10px var(--accent-glow); transition: filter 0.2s;
         }
 
-        button:hover { filter: brightness(1.2); }
+        .action-btn:hover { filter: brightness(1.2); }
 
         .highlight-sq { box-shadow: inset 0 0 4px 4px var(--accent-cyan); }
         .highlight-last { background-color: rgba(187, 134, 252, 0.4) !important; }
@@ -108,13 +117,18 @@
                 </div>
             </div>
 
+            <div class="color-selector">
+                <button id="playWhiteBtn" class="side-btn active" onclick="setPlayerColor('w')">Play as White ♔</button>
+                <button id="playBlackBtn" class="side-btn" onclick="setPlayerColor('b')">Play as Black ♚</button>
+            </div>
+
             <div id="chat-window">
-                <div class="bubble">Greetings Timmy! Antigravity neural network online. Ready to pair-program and play high-level chess! ⚡</div>
+                <div class="bubble">Greetings Timmy! Antigravity neural network online. Select your color and let's calculate! ⚡</div>
             </div>
 
             <div class="controls">
-                <button id="undoBtn">Undo Move</button>
-                <button onclick="location.reload()">New Session</button>
+                <button id="undoBtn" class="action-btn">Undo Move</button>
+                <button onclick="resetGame()" class="action-btn">New Session</button>
             </div>
         </div>
     </div>
@@ -129,7 +143,8 @@
             engine = new Worker('./stockfish-18-lite-single.js'), 
             sourceSquare = null,
             isThinking = false,
-            chatHistory = [];
+            chatHistory = [],
+            playerColor = 'w';
 
         engine.postMessage('uci');
 
@@ -191,13 +206,56 @@
             }
         }
 
+        async function makeBotMove() {
+            if (game.game_over()) return;
+
+            const bookMove = window.getOpeningBookMove ? window.getOpeningBookMove(game, 'antigravity') : null;
+            if (bookMove) {
+                const botMove = game.move(bookMove);
+                if (botMove) {
+                    board.position(game.fen());
+                    $('.square-55d63').removeClass('highlight-last');
+                    $('.square-'+botMove.from+', .square-'+botMove.to).addClass('highlight-last');
+                    await getAIResponse(botMove, false);
+                    sourceSquare = null;
+                    return;
+                }
+            }
+
+            engine.postMessage('position fen ' + game.fen());
+            engine.postMessage('go depth 15');
+        }
+
+        async function setPlayerColor(color) {
+            playerColor = color;
+            resetGame();
+        }
+
+        async function resetGame() {
+            game.reset();
+            chatHistory = [];
+            board.position('start');
+            board.orientation(playerColor === 'w' ? 'white' : 'black');
+            $('.square-55d63').removeClass('highlight-last highlight-sq');
+            sourceSquare = null;
+
+            $('#playWhiteBtn').toggleClass('active', playerColor === 'w');
+            $('#playBlackBtn').toggleClass('active', playerColor === 'b');
+            
+            $('#chat-window').html('<div class="bubble">Neural session initialized. Playing as ' + (playerColor === 'w' ? 'White' : 'Black') + '.</div>');
+
+            if (playerColor === 'b') {
+                await makeBotMove();
+            }
+        }
+
         async function onSquareClick() {
             var square = $(this).attr('data-square');
-            if (game.game_over()) return;
+            if (game.game_over() || isThinking) return;
 
             if (sourceSquare === null) {
                 var piece = game.get(square);
-                if (piece && piece.color === game.turn()) {
+                if (piece && piece.color === playerColor && game.turn() === playerColor) {
                     sourceSquare = square;
                     $('.square-55d63').removeClass('highlight-sq');
                     $('.square-' + square).addClass('highlight-sq');
@@ -213,21 +271,9 @@
                     
                     await getAIResponse(move, true);
 
-                    const bookMove = window.getOpeningBookMove ? window.getOpeningBookMove(game, 'antigravity') : null;
-                    if (bookMove) {
-                        const botMove = game.move(bookMove);
-                        if (botMove) {
-                            board.position(game.fen());
-                            $('.square-55d63').removeClass('highlight-last');
-                            $('.square-'+botMove.from+', .square-'+botMove.to).addClass('highlight-last');
-                            await getAIResponse(botMove, false);
-                            sourceSquare = null;
-                            return;
-                        }
+                    if (!game.game_over()) {
+                        await makeBotMove();
                     }
-
-                    engine.postMessage('position fen ' + game.fen());
-                    engine.postMessage('go depth 15'); 
                 }
                 sourceSquare = null;
             }
@@ -242,7 +288,7 @@
                 $('.square-'+move.from+', .square-'+move.to).addClass('highlight-last');
                 
                 if (game.in_checkmate()) {
-                    speak("Checkmate executed cleanly! Magnificent game, Timmy!");
+                    speak("Checkmate executed cleanly! Magnificent game!");
                 } else {
                     await getAIResponse(move, false);
                 }

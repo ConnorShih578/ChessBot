@@ -70,14 +70,23 @@
             max-width: 85%; font-size: 0.95em; line-height: 1.4;
         }
 
+        .color-selector { display: flex; gap: 8px; margin-bottom: 10px; }
+        .side-btn {
+            flex: 1; padding: 10px; cursor: pointer; background: #333; color: white;
+            border: 2px solid #555; border-radius: 6px; font-weight: bold; transition: all 0.2s;
+        }
+        .side-btn.active {
+            background: var(--accent-blue); border-color: var(--accent-blue); color: white;
+        }
+
         .controls { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 
-        button {
+        .action-btn {
             padding: 12px; cursor: pointer; background: var(--accent-blue); color: white;
             border: none; border-radius: 6px; font-weight: bold;
         }
 
-        button:hover { background: var(--accent-dark-blue); }
+        .action-btn:hover { background: var(--accent-dark-blue); }
 
         .highlight-sq { box-shadow: inset 0 0 3px 3px var(--accent-blue); }
         .highlight-last { background-color: rgba(33, 150, 243, 0.4) !important; }
@@ -99,13 +108,18 @@
                 </div>
             </div>
 
+            <div class="color-selector">
+                <button id="playWhiteBtn" class="side-btn active" onclick="setPlayerColor('w')">Play as White ♔</button>
+                <button id="playBlackBtn" class="side-btn" onclick="setPlayerColor('b')">Play as Black ♚</button>
+            </div>
+
             <div id="chat-window">
-                <div class="bubble">Hey! I'm Timmy, creator of TimChess. Good luck and let's have a great game!</div>
+                <div class="bubble">Hey! I'm Timmy, creator of TimChess. Choose your color and let me know when you're ready!</div>
             </div>
 
             <div class="controls">
-                <button id="undoBtn">Undo Move</button>
-                <button onclick="location.reload()">New Game</button>
+                <button id="undoBtn" class="action-btn">Undo Move</button>
+                <button onclick="resetGame()" class="action-btn">New Game</button>
             </div>
         </div>
     </div>
@@ -120,7 +134,8 @@
             engine = new Worker('./stockfish-18-lite-single.js'), 
             sourceSquare = null,
             isThinking = false,
-            chatHistory = [];
+            chatHistory = [],
+            playerColor = 'w';
 
         engine.postMessage('uci');
         engine.postMessage('setoption name UCI_LimitStrength value true');
@@ -185,13 +200,56 @@
             }
         }
 
+        async function makeBotMove() {
+            if (game.game_over()) return;
+
+            const bookMove = window.getOpeningBookMove ? window.getOpeningBookMove(game, 'timmy') : null;
+            if (bookMove) {
+                const botMove = game.move(bookMove);
+                if (botMove) {
+                    board.position(game.fen());
+                    $('.square-55d63').removeClass('highlight-last');
+                    $('.square-'+botMove.from+', .square-'+botMove.to).addClass('highlight-last');
+                    await getAIResponse(botMove, false);
+                    sourceSquare = null;
+                    return;
+                }
+            }
+
+            engine.postMessage('position fen ' + game.fen());
+            engine.postMessage('go movetime 600');
+        }
+
+        async function setPlayerColor(color) {
+            playerColor = color;
+            resetGame();
+        }
+
+        async function resetGame() {
+            game.reset();
+            chatHistory = [];
+            board.position('start');
+            board.orientation(playerColor === 'w' ? 'white' : 'black');
+            $('.square-55d63').removeClass('highlight-last highlight-sq');
+            sourceSquare = null;
+
+            $('#playWhiteBtn').toggleClass('active', playerColor === 'w');
+            $('#playBlackBtn').toggleClass('active', playerColor === 'b');
+            
+            $('#chat-window').html('<div class="bubble">Game started! You are playing as ' + (playerColor === 'w' ? 'White' : 'Black') + '.</div>');
+
+            if (playerColor === 'b') {
+                await makeBotMove();
+            }
+        }
+
         async function onSquareClick() {
             var square = $(this).attr('data-square');
-            if (game.game_over()) return;
+            if (game.game_over() || isThinking) return;
 
             if (sourceSquare === null) {
                 var piece = game.get(square);
-                if (piece && piece.color === game.turn()) {
+                if (piece && piece.color === playerColor && game.turn() === playerColor) {
                     sourceSquare = square;
                     $('.square-55d63').removeClass('highlight-sq');
                     $('.square-' + square).addClass('highlight-sq');
@@ -207,21 +265,9 @@
                     
                     await getAIResponse(move, true);
 
-                    const bookMove = window.getOpeningBookMove ? window.getOpeningBookMove(game, 'timmy') : null;
-                    if (bookMove) {
-                        const botMove = game.move(bookMove);
-                        if (botMove) {
-                            board.position(game.fen());
-                            $('.square-55d63').removeClass('highlight-last');
-                            $('.square-'+botMove.from+', .square-'+botMove.to).addClass('highlight-last');
-                            await getAIResponse(botMove, false);
-                            sourceSquare = null;
-                            return;
-                        }
+                    if (!game.game_over()) {
+                        await makeBotMove();
                     }
-
-                    engine.postMessage('position fen ' + game.fen());
-                    engine.postMessage('go movetime 600'); 
                 }
                 sourceSquare = null;
             }
