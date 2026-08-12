@@ -26,13 +26,17 @@ function toggleVoiceMute() {
     return voiceMuted;
 }
 
+function cleanRolePrefixes(text) {
+    return text.replace(/^(HUMAN|BOT|STOCKFISH|FWOG|KOOPA|TURTLE|MARTINA|TIMMY|ANTIGRAVITY|CHICKEN):\s*/gi, '').trim();
+}
+
 function speakVoice(text, botKey = 'default') {
     if (voiceMuted) return;
     if (typeof window === 'undefined' || !('speechSynthesis' in window)) return;
 
     window.speechSynthesis.cancel();
 
-    let cleanText = text
+    let cleanText = cleanRolePrefixes(text)
         .replace(/[*_#>~`]/g, '')
         .replace(/\(thinking\.\.\.\)/gi, '')
         .replace(/\(analysing\.\.\.\)/gi, '')

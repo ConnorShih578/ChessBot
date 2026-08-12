@@ -137,13 +137,15 @@
                     if (done) break;
                     const chunk = decoder.decode(value, { stream: true });
                     fullText += chunk;
-                    $(`#${msgId}`).text("> " + fullText);
+                    const clean = fullText.replace(/^(HUMAN|BOT|STOCKFISH|FWOG|KOOPA|TURTLE|MARTINA|TIMMY|ANTIGRAVITY|CHICKEN):\s*/gi, '').trim();
+                    $(`#${msgId}`).text("> " + clean);
                     $('#chat-window').scrollTop($('#chat-window')[0].scrollHeight);
                 }
 
                 if (fullText) {
-                    chatHistory.push({ role: 'model', parts: [{ text: fullText }] });
-                    speakVoice(fullText, 'default');
+                    const cleanText = fullText.replace(/^(HUMAN|BOT|STOCKFISH|FWOG|KOOPA|TURTLE|MARTINA|TIMMY|ANTIGRAVITY|CHICKEN):\s*/gi, '').trim();
+                    chatHistory.push({ role: 'model', parts: [{ text: cleanText }] });
+                    speakVoice(cleanText, 'default');
                 }
             } catch (err) {
                 console.error(err);
