@@ -7,6 +7,10 @@
     <title>Tim Chess - Choose Your Opponent</title>
     <link rel="icon" type="image/png" href="Faviconchess.png">
     <style>
+        *, *::before, *::after {
+            box-sizing: border-box;
+        }
+
         :root {
             --bg-color: #121212;
             --text-color: #ffffff;
@@ -22,24 +26,44 @@
             justify-content: center;
             min-height: 100vh;
             margin: 0;
-            padding: 30px 10px;
+            padding: 30px 16px;
+            overflow-x: hidden;
+            width: 100%;
+        }
+
+        .header-container {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 14px;
+            margin-bottom: 5px;
+            text-align: center;
+            flex-wrap: wrap;
         }
 
         h1 {
-            font-size: 3rem;
-            margin-bottom: 5px;
+            font-size: clamp(2rem, 6vw, 3rem);
+            margin: 0;
             background: linear-gradient(90deg, #2196F3, #bb86fc);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
         }
 
+        .subtitle {
+            color: #aaa;
+            margin-bottom: 25px;
+            text-align: center;
+            font-size: clamp(0.9rem, 2.5vw, 1.05rem);
+            padding: 0 10px;
+        }
+
         .bot-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-            gap: 22px;
+            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+            gap: 20px;
             max-width: 1200px;
-            width: 95%;
-            padding: 20px;
+            width: 100%;
+            padding: 10px 0;
         }
 
         .bot-card {
@@ -56,16 +80,23 @@
             flex-direction: column;
             align-items: center;
             justify-content: space-between;
+            min-height: 230px;
         }
 
-        .bot-card:hover {
-            transform: translateY(-8px) scale(1.02);
-            box-shadow: 0 12px 28px var(--glow-color, rgba(255,255,255,0.2));
-            border-color: var(--theme-color) !important;
+        @media (hover: hover) {
+            .bot-card:hover {
+                transform: translateY(-6px) scale(1.02);
+                box-shadow: 0 12px 28px var(--glow-color, rgba(255,255,255,0.2));
+                border-color: var(--theme-color) !important;
+            }
+        }
+
+        .bot-card:active {
+            transform: scale(0.98);
         }
 
         .avatar {
-            font-size: 55px;
+            font-size: 50px;
             display: block;
             margin-bottom: 12px;
             filter: drop-shadow(0 4px 8px rgba(0,0,0,0.4));
@@ -73,7 +104,7 @@
 
         .card-title {
             font-weight: bold;
-            font-size: 1.4rem;
+            font-size: 1.35rem;
             margin-bottom: 6px;
             color: var(--theme-color, #fff);
         }
@@ -94,16 +125,30 @@
             letter-spacing: 0.5px;
             box-shadow: 0 2px 8px rgba(0,0,0,0.3);
         }
+
+        @media (max-width: 600px) {
+            body {
+                padding: 20px 12px;
+            }
+            .bot-grid {
+                grid-template-columns: 1fr;
+                gap: 16px;
+            }
+            .bot-card {
+                padding: 20px 16px;
+                min-height: auto;
+            }
+        }
     </style>
 </head>
 
 <body>
 
-    <div style="display: flex; align-items: center; gap: 15px; margin-bottom: 5px;">
-        <img src="Faviconchess.png" alt="Tim Chess Logo" style="width: 55px; height: 55px; border-radius: 12px; box-shadow: 0 4px 15px rgba(33, 150, 243, 0.4);">
-        <h1 style="margin: 0;">Tim Chess</h1>
+    <div class="header-container">
+        <img src="Faviconchess.png" alt="Tim Chess Logo" style="width: 48px; height: 48px; border-radius: 12px; box-shadow: 0 4px 15px rgba(33, 150, 243, 0.4);">
+        <h1>Tim Chess</h1>
     </div>
-    <p style="color: #aaa; margin-bottom: 25px;">Select your opponent to begin playing!</p>
+    <p class="subtitle">Select your opponent to begin playing!</p>
 
     <div class="bot-grid">
         <!-- Timmy Card -->

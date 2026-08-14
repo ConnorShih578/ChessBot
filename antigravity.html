@@ -5,8 +5,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Tim Chess - Antigravity AI</title>
     <link rel="stylesheet" href="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.css">
+    <link rel="stylesheet" href="chessStyles.css">
     <link rel="icon" type="image/png" href="Faviconchess.png">
     <style>
+        *, *::before, *::after {
+            box-sizing: border-box;
+        }
+
         :root {
             --bg-color: #0b0e14;
             --sidebar-color: #161b22;
@@ -24,81 +29,234 @@
             flex-direction: column;
             align-items: center;
             margin: 0;
-            padding: 20px;
+            padding: 16px 12px;
             min-height: 100vh;
             background-image: radial-gradient(circle at 50% 0%, #1e1b4b 0%, #0b0e14 70%);
+            overflow-x: hidden;
+            width: 100%;
         }
 
         .nav-link {
             text-decoration: none;
             color: var(--accent-cyan);
             font-weight: bold;
-            margin-bottom: 10px;
-            align-self: flex-start;
+            margin-bottom: 12px;
+            align-self: center;
+            width: 100%;
+            max-width: 1050px;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.95rem;
+            transition: opacity 0.2s;
+        }
+
+        .nav-link:hover {
+            opacity: 0.85;
         }
 
         #game-container {
-            display: flex; gap: 20px; width: 100%; max-width: 1000px; height: 600px; margin-top: 10px;
+            display: flex;
+            gap: 20px;
+            width: 100%;
+            max-width: 1050px;
+            min-height: 600px;
+            margin-top: 4px;
         }
 
         #board {
-            width: 550px; flex-shrink: 0; border: 4px solid var(--accent-purple);
-            border-radius: 12px; box-shadow: 0 0 20px var(--accent-glow);
+            width: 550px;
+            max-width: 100%;
+            aspect-ratio: 1 / 1;
+            flex-shrink: 0;
+            border: 4px solid var(--accent-purple);
+            border-radius: 12px;
+            box-shadow: 0 0 20px var(--accent-glow);
+            touch-action: manipulation;
+            position: relative;
         }
 
         #sidebar {
-            flex: 1; background-color: var(--sidebar-color); border-radius: 12px;
-            padding: 20px; display: flex; flex-direction: column;
-            border: 1px solid #30363d; box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+            flex: 1;
+            background-color: var(--sidebar-color);
+            border-radius: 12px;
+            padding: 18px;
+            display: flex;
+            flex-direction: column;
+            border: 1px solid #30363d;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+            min-width: 0;
         }
 
         .bot-profile {
-            display: flex; align-items: center; gap: 15px; margin-bottom: 15px;
-            padding-bottom: 15px; border-bottom: 1px solid #30363d;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 12px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid #30363d;
         }
 
         .avatar {
-            width: 60px; height: 60px;
+            width: 55px;
+            height: 55px;
+            flex-shrink: 0;
             background: linear-gradient(135deg, var(--accent-purple), var(--accent-cyan));
-            border-radius: 50%; display: flex; align-items: center;
-            justify-content: center; font-size: 2em; color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.8em;
+            color: white;
             box-shadow: 0 0 15px var(--accent-glow);
+            transition: transform 0.2s;
         }
 
         #chat-window {
-            flex: 1; background: #0d1117; border-radius: 8px; padding: 15px;
-            overflow-y: auto; margin-bottom: 15px; display: flex;
-            flex-direction: column; gap: 10px; border: 1px solid #30363d;
+            flex: 1;
+            background: #0d1117;
+            border-radius: 8px;
+            padding: 15px;
+            overflow-y: auto;
+            margin-bottom: 10px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            border: 1px solid #30363d;
+            min-height: 170px;
+            -webkit-overflow-scrolling: touch;
         }
 
         .bubble {
-            background: #21262d; padding: 10px 14px; border-radius: 14px;
-            border-left: 3px solid var(--accent-purple); align-self: flex-start;
-            max-width: 85%; font-size: 0.95em; line-height: 1.4;
+            background: #21262d;
+            padding: 10px 14px;
+            border-radius: 14px;
+            border-left: 3px solid var(--accent-purple);
+            align-self: flex-start;
+            max-width: 88%;
+            font-size: 0.92em;
+            line-height: 1.4;
+            word-break: break-word;
         }
 
-        .color-selector { display: flex; gap: 8px; margin-bottom: 10px; }
+        .color-selector {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 10px;
+            width: 100%;
+        }
+
         .side-btn {
-            flex: 1; padding: 10px; cursor: pointer; background: #21262d; color: white;
-            border: 2px solid #30363d; border-radius: 6px; font-weight: bold; transition: all 0.2s;
-        }
-        .side-btn.active {
-            background: var(--accent-purple); border-color: var(--accent-purple); color: black;
+            flex: 1;
+            padding: 10px 6px;
+            cursor: pointer;
+            background: #21262d;
+            color: white;
+            border: 2px solid #30363d;
+            border-radius: 6px;
+            font-weight: bold;
+            font-size: 0.85rem;
+            transition: all 0.2s;
+            text-align: center;
         }
 
-        .controls { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+        .side-btn.active {
+            background: var(--accent-purple);
+            border-color: var(--accent-purple);
+            color: black;
+        }
+
+        .controls {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 8px;
+            width: 100%;
+        }
 
         .action-btn {
-            padding: 10px; cursor: pointer;
+            padding: 10px 4px;
+            cursor: pointer;
             background: linear-gradient(135deg, var(--accent-purple), #9965f4);
-            color: white; border: none; border-radius: 8px; font-weight: bold; font-size: 0.9em;
-            box-shadow: 0 4px 10px var(--accent-glow); transition: filter 0.2s;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-weight: bold;
+            font-size: 0.82rem;
+            box-shadow: 0 4px 10px var(--accent-glow);
+            transition: filter 0.2s;
+            text-align: center;
+            min-height: 40px;
         }
 
-        .action-btn:hover { filter: brightness(1.2); }
+        .action-btn:hover {
+            filter: brightness(1.2);
+        }
 
-        .highlight-sq { box-shadow: inset 0 0 4px 4px var(--accent-cyan); }
-        .highlight-last { background-color: rgba(187, 134, 252, 0.4) !important; }
+        .highlight-sq {
+            box-shadow: inset 0 0 4px 4px var(--accent-cyan);
+        }
+
+        .highlight-last {
+            background-color: rgba(187, 134, 252, 0.4) !important;
+        }
+
+        @media (max-width: 850px) {
+            body {
+                padding: 12px 10px 24px 10px;
+            }
+
+            .nav-link {
+                margin-bottom: 8px;
+            }
+
+            #game-container {
+                flex-direction: column;
+                height: auto;
+                align-items: center;
+                gap: 14px;
+            }
+
+            #board {
+                width: 100%;
+                max-width: 480px;
+            }
+
+            #sidebar {
+                width: 100%;
+                max-width: 480px;
+                padding: 14px;
+            }
+
+            .bot-profile {
+                margin-bottom: 10px;
+                padding-bottom: 10px;
+                gap: 12px;
+            }
+
+            .avatar {
+                width: 48px;
+                height: 48px;
+                font-size: 1.6em;
+            }
+
+            #chat-window {
+                height: 160px;
+                min-height: 130px;
+                max-height: 200px;
+                flex: none;
+                padding: 12px;
+            }
+
+            .side-btn {
+                padding: 9px 4px;
+                font-size: 0.82rem;
+            }
+
+            .action-btn {
+                padding: 9px 2px;
+                font-size: 0.78rem;
+            }
+        }
     </style>
 </head>
 <body>
@@ -106,7 +264,23 @@
     <a href="index.html" class="nav-link">← BACK TO HOME</a>
 
     <div id="game-container">
-        <div id="board"></div>
+        <div class="board-area-wrapper">
+            <div class="eval-bar-container" title="Evaluation Bar">
+                <div id="eval-bar-fill" class="eval-bar-fill"></div>
+                <div id="eval-bar-text" class="eval-bar-text">0.0</div>
+            </div>
+            <div class="board-section">
+                <div class="captured-row">
+                    <div id="topCaptured" class="cap-pieces-list"></div>
+                    <div id="topPlayerLabel" style="font-size: 0.8rem; color: #888;">Antigravity</div>
+                </div>
+                <div id="board"></div>
+                <div class="captured-row">
+                    <div id="bottomCaptured" class="cap-pieces-list"></div>
+                    <div id="bottomPlayerLabel" style="font-size: 0.8rem; color: #888;">You</div>
+                </div>
+            </div>
+        </div>
 
         <div id="sidebar">
             <div class="bot-profile">
@@ -118,18 +292,26 @@
             </div>
 
             <div class="color-selector">
-                <button id="playWhiteBtn" class="side-btn active" onclick="setPlayerColor('w')">Play as White ♔</button>
-                <button id="playBlackBtn" class="side-btn" onclick="setPlayerColor('b')">Play as Black ♚</button>
+                <button id="playWhiteBtn" class="side-btn active">Play as White ♔</button>
+                <button id="playBlackBtn" class="side-btn">Play as Black ♚</button>
             </div>
+
+            <div style="font-size: 0.8rem; color: #888; margin-bottom: 4px; font-weight: bold;">MOVE LOG:</div>
+            <div id="move-history" class="move-history-container" title="Move History"></div>
 
             <div id="chat-window">
-                <div class="bubble">Greetings Timmy! Antigravity neural network online. Select your color and let's calculate! ⚡</div>
+                <div class="bubble">Greetings! Antigravity neural network online. Select your color and let's calculate! ⚡</div>
             </div>
 
+            <form id="chat-form" class="chat-input-form" onsubmit="event.preventDefault(); window.sendUserChatMessage();">
+                <input type="text" id="userChatInput" placeholder="Send telemetry / message to Antigravity..." autocomplete="off">
+                <button type="submit" class="chat-send-btn">Send ↵</button>
+            </form>
+
             <div class="controls">
-                <button id="voiceToggleBtn" class="action-btn" onclick="handleVoiceToggle()">🔊 Voice</button>
-                <button id="undoBtn" class="action-btn">Undo</button>
-                <button onclick="resetGame()" class="action-btn">New Session</button>
+                <button id="voiceToggleBtn" class="action-btn">🔊 VOICE</button>
+                <button id="undoBtn" class="action-btn">UNDO</button>
+                <button id="resetBtn" class="action-btn">NEW GAME</button>
             </div>
         </div>
     </div>
@@ -139,30 +321,115 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>
     <script src="openingBook.js"></script>
     <script src="voice.js"></script>
-    <script>
-        var board = null, 
-            game = new Chess(), 
-            engine = new Worker('./stockfish-18-lite-single.js'), 
-            sourceSquare = null,
-            isThinking = false,
-            chatHistory = [],
-            playerColor = 'w';
 
+    <script type="module">
+        import { playMoveSound, playCaptureSound, playCheckSound, playGameOverSound, playBotSound } from './chessAudio.js';
+        import { showLegalMoveDots, clearLegalMoveDots, updateCapturedPieces, updateMoveHistoryUI, updateEvalBarUI, updateBotReactionUI, promptPawnPromotion } from './chessUI.js';
+
+        const BOT_KEY = 'antigravity';
+        const game = new Chess();
+        let board = null;
+        let isThinking = false;
+        let chatHistory = [];
+        let playerColor = 'w';
+        let sourceSquare = null;
+
+        const engine = new Worker('./stockfish-18-lite-single.js');
         engine.postMessage('uci');
 
         function updateVoiceBtnUI() {
-            $('#voiceToggleBtn').text(isVoiceMuted() ? '🔇 Muted' : '🔊 Voice');
+            $('#voiceToggleBtn').text(isVoiceMuted() ? '🔇 MUTED' : '🔊 VOICE');
         }
 
-        function handleVoiceToggle() {
+        $('#voiceToggleBtn').click(() => {
             toggleVoiceMute();
             updateVoiceBtnUI();
+        });
+
+        function refreshBoardUI() {
+            const isPlayerWhite = playerColor === 'w';
+            updateCapturedPieces(game, {
+                whiteContainer: isPlayerWhite ? document.getElementById('bottomCaptured') : document.getElementById('topCaptured'),
+                blackContainer: isPlayerWhite ? document.getElementById('topCaptured') : document.getElementById('bottomCaptured')
+            });
+
+            $('#topPlayerLabel').text(isPlayerWhite ? 'Antigravity (Black)' : 'Antigravity (White)');
+            $('#bottomPlayerLabel').text(isPlayerWhite ? 'You (White)' : 'You (Black)');
+
+            updateMoveHistoryUI(game, document.getElementById('move-history'));
         }
 
-        function speak(text) {
-            $('#chat-window').append(`<div class="bubble">${text}</div>`);
+        function updateHighlight(move) {
+            $('.square-55d63').removeClass('highlight-last');
+            if (move) {
+                $('.square-' + move.from + ', .square-' + move.to).addClass('highlight-last');
+            }
+        }
+
+        function addMessage(text, id = null, isUser = false) {
+            const idAttr = id ? `id="${id}"` : '';
+            const userClass = isUser ? 'user-bubble' : '';
+            $('#chat-window').append(`<div class="bubble ${userClass}" ${idAttr}>${text}</div>`);
             $('#chat-window').scrollTop($('#chat-window')[0].scrollHeight);
-            speakVoice(text, 'antigravity');
+            if (!isUser) speakVoice(text, BOT_KEY);
+        }
+
+        window.sendUserChatMessage = async function() {
+            const input = document.getElementById('userChatInput');
+            if (!input) return;
+            const text = input.value.trim();
+            if (!text || isThinking) return;
+
+            input.value = '';
+            addMessage(text, null, true);
+
+            chatHistory.push({ role: 'user', parts: [{ text: `HUMAN_CHAT: ${text}` }] });
+            const msgId = `msg-${Date.now()}`;
+            addMessage("Computing response...", msgId, false);
+
+            try {
+                const res = await fetch('/api/commentary-antigravity', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ history: chatHistory })
+                });
+
+                const reader = res.body.getReader();
+                const decoder = new TextDecoder();
+                let fullText = "";
+                $(`#${msgId}`).html("");
+
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+                    const chunk = decoder.decode(value, { stream: true });
+                    fullText += chunk;
+                    const clean = fullText.replace(/^(HUMAN|BOT|STOCKFISH|FWOG|KOOPA|TURTLE|MARTINA|TIMMY|ANTIGRAVITY|CHICKEN):\s*/gi, '').trim();
+                    $(`#${msgId}`).text(clean);
+                    $('#chat-window').scrollTop($('#chat-window')[0].scrollHeight);
+                }
+
+                if (fullText) {
+                    const cleanText = fullText.replace(/^(HUMAN|BOT|STOCKFISH|FWOG|KOOPA|TURTLE|MARTINA|TIMMY|ANTIGRAVITY|CHICKEN):\s*/gi, '').trim();
+                    chatHistory.push({ role: 'model', parts: [{ text: cleanText }] });
+                    speakVoice(cleanText, BOT_KEY);
+                }
+            } catch (err) {
+                console.error(err);
+                $(`#${msgId}`).text(`ERROR: ${err.message}`);
+                chatHistory.pop();
+            }
+        };
+
+        async function handleGameOver() {
+            let resultMsg = "";
+            if (game.in_checkmate()) {
+                const winner = game.turn() === 'w' ? 'Black' : 'White';
+                resultMsg = `Checkmate! Computational victory for ${winner}.`;
+            } else if (game.in_draw()) {
+                resultMsg = "Game draw / stalemate detected.";
+            }
+            addMessage(resultMsg);
         }
 
         async function getAIResponse(move, isUser) {
@@ -170,14 +437,10 @@
             isThinking = true;
 
             const inputPrompt = isUser ? `HUMAN: ${move.san}` : `ANTIGRAVITY: ${move.san}`;
-            chatHistory.push({
-                role: 'user',
-                parts: [{ text: inputPrompt }]
-            });
+            chatHistory.push({ role: 'user', parts: [{ text: inputPrompt }] });
 
             const bubbleId = `msg-${Date.now()}`;
-            $('#chat-window').append(`<div class="bubble" id="${bubbleId}">Computing... <span style="color: var(--accent-cyan);">(analysing...)</span></div>`);
-            $('#chat-window').scrollTop($('#chat-window')[0].scrollHeight);
+            addMessage("Computing...", bubbleId, false);
 
             try {
                 const response = await fetch('/api/commentary-antigravity', {
@@ -196,20 +459,16 @@
                     if (done) break;
                     const chunk = decoder.decode(value, { stream: true });
                     fullText += chunk;
-                    $(`#${bubbleId}`).text(fullText);
+                    const clean = fullText.replace(/^(HUMAN|BOT|STOCKFISH|FWOG|KOOPA|TURTLE|MARTINA|TIMMY|ANTIGRAVITY|CHICKEN):\s*/gi, '').trim();
+                    $(`#${bubbleId}`).text(clean);
                     $('#chat-window').scrollTop($('#chat-window')[0].scrollHeight);
                 }
 
-                if (!fullText) {
-                    $(`#${bubbleId}`).text("(No response received)");
-                } else {
-                    chatHistory.push({
-                        role: 'model',
-                        parts: [{ text: fullText }]
-                    });
-                    speakVoice(fullText, 'antigravity');
+                if (fullText) {
+                    const cleanText = fullText.replace(/^(HUMAN|BOT|STOCKFISH|FWOG|KOOPA|TURTLE|MARTINA|TIMMY|ANTIGRAVITY|CHICKEN):\s*/gi, '').trim();
+                    chatHistory.push({ role: 'model', parts: [{ text: cleanText }] });
+                    speakVoice(cleanText, BOT_KEY);
                 }
-
             } catch (e) {
                 console.error("AI Error:", e);
                 $(`#${bubbleId}`).text(`ERROR: ${e.message}`);
@@ -222,13 +481,29 @@
         async function makeBotMove() {
             if (game.game_over()) return;
 
-            const bookMove = window.getOpeningBookMove ? window.getOpeningBookMove(game, 'antigravity') : null;
+            const bookMove = window.getOpeningBookMove ? window.getOpeningBookMove(game, BOT_KEY) : null;
             if (bookMove) {
                 const botMove = game.move(bookMove);
                 if (botMove) {
                     board.position(game.fen());
-                    $('.square-55d63').removeClass('highlight-last');
-                    $('.square-'+botMove.from+', .square-'+botMove.to).addClass('highlight-last');
+                    updateHighlight(botMove);
+
+                    if (botMove.captured) {
+                        playCaptureSound();
+                        playBotSound(BOT_KEY);
+                    } else {
+                        playMoveSound();
+                    }
+
+                    if (game.in_check()) playCheckSound();
+
+                    refreshBoardUI();
+
+                    if (game.game_over()) {
+                        playGameOverSound(game.turn() !== playerColor);
+                        handleGameOver();
+                    }
+
                     await getAIResponse(botMove, false);
                     sourceSquare = null;
                     return;
@@ -236,12 +511,7 @@
             }
 
             engine.postMessage('position fen ' + game.fen());
-            engine.postMessage('go depth 15');
-        }
-
-        async function setPlayerColor(color) {
-            playerColor = color;
-            resetGame();
+            engine.postMessage('go movetime 800');
         }
 
         async function resetGame() {
@@ -250,74 +520,176 @@
             board.position('start');
             board.orientation(playerColor === 'w' ? 'white' : 'black');
             $('.square-55d63').removeClass('highlight-last highlight-sq');
+            clearLegalMoveDots();
             sourceSquare = null;
 
             $('#playWhiteBtn').toggleClass('active', playerColor === 'w');
             $('#playBlackBtn').toggleClass('active', playerColor === 'b');
-            
-            const intro = 'Neural session initialized. Playing as ' + (playerColor === 'w' ? 'White' : 'Black') + '.';
+
+            updateEvalBarUI(0, false, playerColor);
+            updateBotReactionUI(BOT_KEY, 0, false, false);
+            refreshBoardUI();
+
+            const intro = 'Neural nodes initialized. You are playing as ' + (playerColor === 'w' ? 'White' : 'Black') + '.';
             $('#chat-window').html('<div class="bubble">' + intro + '</div>');
-            speakVoice(intro, 'antigravity');
+            speakVoice(intro, BOT_KEY);
 
             if (playerColor === 'b') {
                 await makeBotMove();
             }
         }
 
+        $('#playWhiteBtn').click(() => { playerColor = 'w'; resetGame(); });
+        $('#playBlackBtn').click(() => { playerColor = 'b'; resetGame(); });
+        $('#resetBtn').click(() => resetGame());
+
+        function executePlayerMove(from, to, promotion = 'q') {
+            const move = game.move({ from, to, promotion });
+            $('.square-55d63').removeClass('highlight-sq');
+            clearLegalMoveDots();
+
+            if (move) {
+                board.position(game.fen());
+                updateHighlight(move);
+
+                if (move.captured) {
+                    playCaptureSound();
+                } else {
+                    playMoveSound();
+                }
+
+                if (game.in_check()) playCheckSound();
+
+                refreshBoardUI();
+
+                if (game.game_over()) {
+                    playGameOverSound(!game.in_checkmate() || game.turn() !== playerColor);
+                    handleGameOver();
+                } else {
+                    getAIResponse(move, true).then(() => {
+                        if (!game.game_over()) {
+                            makeBotMove();
+                        }
+                    });
+                }
+            }
+            sourceSquare = null;
+        }
+
         async function onSquareClick() {
-            var square = $(this).attr('data-square');
+            const square = $(this).attr('data-square');
             if (game.game_over() || isThinking) return;
 
             if (sourceSquare === null) {
-                var piece = game.get(square);
+                const piece = game.get(square);
                 if (piece && piece.color === playerColor && game.turn() === playerColor) {
                     sourceSquare = square;
                     $('.square-55d63').removeClass('highlight-sq');
                     $('.square-' + square).addClass('highlight-sq');
+                    showLegalMoveDots(game, square);
                 }
             } else {
-                var move = game.move({ from: sourceSquare, to: square, promotion: 'q' });
-                $('.square-55d63').removeClass('highlight-sq');
-                
-                if (move) {
-                    board.position(game.fen());
-                    $('.square-55d63').removeClass('highlight-last');
-                    $('.square-'+move.from+', .square-'+move.to).addClass('highlight-last');
-                    
-                    await getAIResponse(move, true);
+                if (square === sourceSquare) {
+                    sourceSquare = null;
+                    $('.square-55d63').removeClass('highlight-sq');
+                    clearLegalMoveDots();
+                    return;
+                }
 
-                    if (!game.game_over()) {
-                        await makeBotMove();
+                const piece = game.get(sourceSquare);
+                const isPromo = piece && piece.type === 'p' && ((piece.color === 'w' && square[1] === '8') || (piece.color === 'b' && square[1] === '1'));
+
+                const legalMoves = game.moves({ square: sourceSquare, verbose: true });
+                const isLegal = legalMoves.some(m => m.to === square);
+
+                if (isLegal) {
+                    if (isPromo) {
+                        promptPawnPromotion(playerColor, (chosenPiece) => {
+                            executePlayerMove(sourceSquare, square, chosenPiece);
+                        });
+                    } else {
+                        executePlayerMove(sourceSquare, square, 'q');
+                    }
+                } else {
+                    const clickedPiece = game.get(square);
+                    if (clickedPiece && clickedPiece.color === playerColor) {
+                        sourceSquare = square;
+                        $('.square-55d63').removeClass('highlight-sq');
+                        $('.square-' + square).addClass('highlight-sq');
+                        showLegalMoveDots(game, square);
+                    } else {
+                        sourceSquare = null;
+                        $('.square-55d63').removeClass('highlight-sq');
+                        clearLegalMoveDots();
                     }
                 }
-                sourceSquare = null;
             }
         }
 
         engine.onmessage = async function(e) {
-            if (e.data.startsWith('bestmove')) {
-                var m = e.data.split(' ')[1];
-                var move = game.move({ from: m.substring(0, 2), to: m.substring(2, 4), promotion: 'q' });
-                board.position(game.fen());
-                $('.square-55d63').removeClass('highlight-last');
-                $('.square-'+move.from+', .square-'+move.to).addClass('highlight-last');
-                
-                if (game.in_checkmate()) {
-                    speak("Checkmate executed cleanly! Magnificent game!");
-                } else {
-                    await getAIResponse(move, false);
+            if (typeof e.data === 'string') {
+                if (e.data.startsWith('info') && e.data.includes('score')) {
+                    const cpMatch = e.data.match(/score cp (-?\d+)/);
+                    const mateMatch = e.data.match(/score mate (-?\d+)/);
+                    if (cpMatch) {
+                        let cp = parseInt(cpMatch[1], 10) / 100;
+                        if (game.turn() === 'b') cp = -cp;
+                        updateEvalBarUI(cp, false, playerColor);
+                        updateBotReactionUI(BOT_KEY, cp, game.in_check(), game.game_over());
+                    } else if (mateMatch) {
+                        let mate = parseInt(mateMatch[1], 10);
+                        if (game.turn() === 'b') mate = -mate;
+                        updateEvalBarUI(mate, true, playerColor);
+                        updateBotReactionUI(BOT_KEY, mate > 0 ? 10 : -10, game.in_check(), game.game_over());
+                    }
+                }
+
+                if (e.data.startsWith('bestmove')) {
+                    const m = e.data.split(' ')[1];
+                    if (!m || m === '(none)') return;
+
+                    const move = game.move({
+                        from: m.substring(0, 2),
+                        to: m.substring(2, 4),
+                        promotion: m.length > 4 ? m[4] : 'q'
+                    });
+
+                    if (move) {
+                        board.position(game.fen());
+                        updateHighlight(move);
+
+                        if (move.captured) {
+                            playCaptureSound();
+                            playBotSound(BOT_KEY);
+                        } else {
+                            playMoveSound();
+                        }
+
+                        if (game.in_check()) playCheckSound();
+
+                        refreshBoardUI();
+
+                        if (game.game_over()) {
+                            playGameOverSound(game.turn() !== playerColor);
+                            handleGameOver();
+                        }
+
+                        await getAIResponse(move, false);
+                    }
                 }
             }
         };
 
         $('#undoBtn').on('click', function() {
-            game.undo(); game.undo(); 
+            game.undo();
+            game.undo();
             board.position(game.fen());
-            $('.square-55d63').removeClass('highlight-last');
-            $('.square-55d63').removeClass('highlight-sq');
+            clearLegalMoveDots();
+            $('.square-55d63').removeClass('highlight-last highlight-sq');
             sourceSquare = null;
             chatHistory = chatHistory.slice(0, -4);
-            speak("Refactoring game tree... reverted to previous state!");
+            refreshBoardUI();
+            addMessage("Refactoring game tree... reverted to previous state!");
         });
 
         $(document).ready(function() {
@@ -327,6 +699,10 @@
                 pieceTheme: 'https://chessboardjs.com/img/chesspieces/wikipedia/{piece}.png' 
             });
             $(document).on('click', '.square-55d63', onSquareClick);
+            $(window).on('resize', function() {
+                if (board) board.resize();
+            });
+            refreshBoardUI();
         });
     </script>
 </body>
