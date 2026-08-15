@@ -248,7 +248,7 @@
             </div>
 
             <form id="chat-form" class="chat-input-form" onsubmit="event.preventDefault(); window.sendUserChatMessage();">
-                <input type="text" id="userChatInput" placeholder="Chat or banter with the bot..." autocomplete="off">
+                <input type="text" id="userChatInput" placeholder="Chat or banter with the bot..." autocomplete="off" maxlength="140">
                 <button type="submit" class="chat-send-btn">Send ↵</button>
             </form>
 
@@ -370,19 +370,24 @@
             }
         }
 
+        const MAX_CHAT_MESSAGES = 12;
+        const MAX_CHAT_TEXT_LEN = 250;
+
         function addMessage(text, id = null, isUser = false) {
             const idAttr = id ? `id="${id}"` : '';
             const userClass = isUser ? 'user-bubble' : '';
-            $('#chat-window').append(`<div class="bubble ${userClass}" ${idAttr}>${text}</div>`);
+            const displayText = (text && text.length > MAX_CHAT_TEXT_LEN) ? text.slice(0, MAX_CHAT_TEXT_LEN) + '...' : text;
+            $('#chat-window').append(`<div class="bubble ${userClass}" ${idAttr}>${displayText}</div>`);
             $('#chat-window').scrollTop($('#chat-window')[0].scrollHeight);
-            if (!isUser) speakVoice(text, BOT_KEY);
+            if (!isUser) speakVoice(displayText, BOT_KEY);
         }
 
         window.sendUserChatMessage = async function() {
             const input = document.getElementById('userChatInput');
             if (!input) return;
-            const text = input.value.trim();
-            if (!text || isThinking) return;
+            const rawText = input.value.trim();
+            if (!rawText || isThinking) return;
+            const text = rawText.slice(0, MAX_CHAT_TEXT_LEN);
 
             input.value = '';
             addMessage(text, null, true);
@@ -409,14 +414,16 @@
                     const chunk = decoder.decode(value, { stream: true });
                     fullText += chunk;
                     const clean = fullText.replace(/^(HUMAN|BOT|STOCKFISH|FWOG|KOOPA|TURTLE|MARTINA|TIMMY|ANTIGRAVITY|CHICKEN):\s*/gi, '').trim();
-                    $(`#${msgId}`).text("> " + clean);
+                    const displayClean = clean.length > MAX_CHAT_TEXT_LEN ? clean.slice(0, MAX_CHAT_TEXT_LEN) + '...' : clean;
+                    $(`#${msgId}`).text("> " + displayClean);
                     $('#chat-window').scrollTop($('#chat-window')[0].scrollHeight);
                 }
 
                 if (fullText) {
                     const cleanText = fullText.replace(/^(HUMAN|BOT|STOCKFISH|FWOG|KOOPA|TURTLE|MARTINA|TIMMY|ANTIGRAVITY|CHICKEN):\s*/gi, '').trim();
-                    chatHistory.push({ role: 'model', parts: [{ text: cleanText }] });
-                    speakVoice(cleanText, BOT_KEY);
+                    const displayClean = cleanText.length > MAX_CHAT_TEXT_LEN ? cleanText.slice(0, MAX_CHAT_TEXT_LEN) + '...' : cleanText;
+                    chatHistory.push({ role: 'model', parts: [{ text: displayClean }] });
+                    speakVoice(displayClean, BOT_KEY);
                 }
             } catch (err) {
                 console.error(err);
@@ -464,14 +471,16 @@
                     const chunk = decoder.decode(value, { stream: true });
                     fullText += chunk;
                     const clean = fullText.replace(/^(HUMAN|BOT|STOCKFISH|FWOG|KOOPA|TURTLE|MARTINA|TIMMY|ANTIGRAVITY|CHICKEN):\s*/gi, '').trim();
-                    $(`#${msgId}`).text("> " + clean);
+                    const displayClean = clean.length > MAX_CHAT_TEXT_LEN ? clean.slice(0, MAX_CHAT_TEXT_LEN) + '...' : clean;
+                    $(`#${msgId}`).text("> " + displayClean);
                     $('#chat-window').scrollTop($('#chat-window')[0].scrollHeight);
                 }
 
                 if (fullText) {
                     const cleanText = fullText.replace(/^(HUMAN|BOT|STOCKFISH|FWOG|KOOPA|TURTLE|MARTINA|TIMMY|ANTIGRAVITY|CHICKEN):\s*/gi, '').trim();
-                    chatHistory.push({ role: 'model', parts: [{ text: cleanText }] });
-                    speakVoice(cleanText, BOT_KEY);
+                    const displayClean = cleanText.length > MAX_CHAT_TEXT_LEN ? cleanText.slice(0, MAX_CHAT_TEXT_LEN) + '...' : cleanText;
+                    chatHistory.push({ role: 'model', parts: [{ text: displayClean }] });
+                    speakVoice(displayClean, BOT_KEY);
                 }
             } catch (err) {
                 console.error(err);
