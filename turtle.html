@@ -297,7 +297,7 @@
             </div>
 
             <form id="chat-form" class="chat-input-form" onsubmit="event.preventDefault(); window.sendUserChatMessage();">
-                <input type="text" id="userChatInput" placeholder="Chat with Turtle..." autocomplete="off" maxlength="140">
+                <input type="text" id="userChatInput" placeholder="Chat with Turtle..." autocomplete="off">
                 <button type="submit" class="chat-send-btn">Send ↵</button>
             </form>
 
@@ -313,7 +313,6 @@
     <script src="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>
     <script src="openingBook.js"></script>
-    <script src="chessAudio.js"></script>
     <script src="voice.js"></script>
 
     <script type="module">
@@ -321,8 +320,6 @@
         import { showLegalMoveDots, clearLegalMoveDots, updateCapturedPieces, updateMoveHistoryUI, updateEvalBarUI, updateBotReactionUI, promptPawnPromotion } from './chessUI.js';
 
         const BOT_KEY = 'turtle';
-        const MAX_CHAT_MESSAGES = 12;
-        const MAX_CHAT_TEXT_LEN = 250;
         const game = new Chess();
         let board = null;
         let isThinking = false;
@@ -368,18 +365,16 @@
         function addMessage(text, id = null, isUser = false) {
             const idAttr = id ? `id="${id}"` : '';
             const userClass = isUser ? 'user-bubble' : '';
-            const displayText = (text && text.length > MAX_CHAT_TEXT_LEN) ? text.slice(0, MAX_CHAT_TEXT_LEN) + '...' : text;
-            $('#chat-window').append(`<div class="bubble ${userClass}" ${idAttr}>${displayText}</div>`);
+            $('#chat-window').append(`<div class="bubble ${userClass}" ${idAttr}>${text}</div>`);
             $('#chat-window').scrollTop($('#chat-window')[0].scrollHeight);
-            if (!isUser) speakVoice(displayText, BOT_KEY);
+            if (!isUser) speakVoice(text, BOT_KEY);
         }
 
         window.sendUserChatMessage = async function() {
             const input = document.getElementById('userChatInput');
             if (!input) return;
-            const rawText = input.value.trim();
-            if (!rawText || isThinking) return;
-            const text = rawText.slice(0, MAX_CHAT_TEXT_LEN);
+            const text = input.value.trim();
+            if (!text || isThinking) return;
 
             input.value = '';
             addMessage(text, null, true);
@@ -406,16 +401,14 @@
                     const chunk = decoder.decode(value, { stream: true });
                     fullText += chunk;
                     const clean = fullText.replace(/^(HUMAN|BOT|STOCKFISH|FWOG|KOOPA|TURTLE|MARTINA|TIMMY|ANTIGRAVITY|CHICKEN):\s*/gi, '').trim();
-                    const displayClean = clean.length > MAX_CHAT_TEXT_LEN ? clean.slice(0, MAX_CHAT_TEXT_LEN) + '...' : clean;
-                    $(`#${msgId}`).text(displayClean);
+                    $(`#${msgId}`).text(clean);
                     $('#chat-window').scrollTop($('#chat-window')[0].scrollHeight);
                 }
 
                 if (fullText) {
                     const cleanText = fullText.replace(/^(HUMAN|BOT|STOCKFISH|FWOG|KOOPA|TURTLE|MARTINA|TIMMY|ANTIGRAVITY|CHICKEN):\s*/gi, '').trim();
-                    const displayClean = cleanText.length > MAX_CHAT_TEXT_LEN ? cleanText.slice(0, MAX_CHAT_TEXT_LEN) + '...' : cleanText;
-                    chatHistory.push({ role: 'model', parts: [{ text: displayClean }] });
-                    speakVoice(displayClean, BOT_KEY);
+                    chatHistory.push({ role: 'model', parts: [{ text: cleanText }] });
+                    speakVoice(cleanText, BOT_KEY);
                 }
             } catch (err) {
                 console.error(err);
@@ -463,16 +456,14 @@
                     const chunk = decoder.decode(value, { stream: true });
                     fullText += chunk;
                     const clean = fullText.replace(/^(HUMAN|BOT|STOCKFISH|FWOG|KOOPA|TURTLE|MARTINA|TIMMY|ANTIGRAVITY|CHICKEN):\s*/gi, '').trim();
-                    const displayClean = clean.length > MAX_CHAT_TEXT_LEN ? clean.slice(0, MAX_CHAT_TEXT_LEN) + '...' : clean;
-                    $(`#${bubbleId}`).text(displayClean);
+                    $(`#${bubbleId}`).text(clean);
                     $('#chat-window').scrollTop($('#chat-window')[0].scrollHeight);
                 }
 
                 if (fullText) {
                     const cleanText = fullText.replace(/^(HUMAN|BOT|STOCKFISH|FWOG|KOOPA|TURTLE|MARTINA|TIMMY|ANTIGRAVITY|CHICKEN):\s*/gi, '').trim();
-                    const displayClean = cleanText.length > MAX_CHAT_TEXT_LEN ? cleanText.slice(0, MAX_CHAT_TEXT_LEN) + '...' : cleanText;
-                    chatHistory.push({ role: 'model', parts: [{ text: displayClean }] });
-                    speakVoice(displayClean, BOT_KEY);
+                    chatHistory.push({ role: 'model', parts: [{ text: cleanText }] });
+                    speakVoice(cleanText, BOT_KEY);
                 }
             } catch (e) {
                 console.error("AI Error:", e);
